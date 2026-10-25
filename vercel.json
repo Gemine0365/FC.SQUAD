@@ -1,6 +1,17 @@
 {
-  "rewrites": [
-    { "source": "/api/ranker", "destination": "/api/ranker.js" },
-    { "source": "/api/hot-players", "destination": "/api/hot-players.js" }
+  "version": 2,
+  "routes": [
+    {
+      "src": "/api/ranker",
+      "dest": "/api/ranker.js"
+    },
+    {
+      "src": "/api/hot-players",
+      "dest": "/api/hot-players.js"
+    },
+    {
+      "src": "/(.*)",
+      "dest": "/$1"
+    }
   ]
 }
