@@ -1,0 +1,4 @@
+User-agent: *
+Allow: /
+
+Sitemap: https://fcsquad.kro.kr/sitemap.xml
