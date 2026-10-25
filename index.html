@@ -448,18 +448,17 @@
 });
 
     async function fetchNexonMetadata() {
-      try {
-        const [spidRes, seasonRes] = await Promise.all([
-          fetch("https://openapi.nexon.com/static/fconline/meta/spid.json"),
-          fetch("https://openapi.nexon.com/static/fconline/meta/seasonid.json")
-        ]);
-        if (spidRes.ok) spidMeta = await spidRes.json();
-        if (seasonRes.ok) seasonMeta = await seasonRes.json();
-      } catch (e) {
-        console.warn("Nexon metadata fallback.");
-      }
-    }
-
+  try {
+    const [spidRes, seasonRes] = await Promise.all([
+      fetch("https://static.fconline.nexon.com/meta/spid.json"),
+      fetch("https://static.fconline.nexon.com/meta/seasonid.json")
+    ]);
+    if (spidRes.ok) spidMeta = await spidRes.json();
+    if (seasonRes.ok) seasonMeta = await seasonRes.json();
+  } catch (e) {
+    console.warn("Nexon metadata fallback.");
+  }
+}
     // TAB SWITCHER
     function switchTab(tabId) {
       const tabs = ['match', 'squad', 'market', 'random'];
