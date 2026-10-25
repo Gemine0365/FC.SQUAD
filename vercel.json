@@ -1,17 +1,3 @@
 {
-  "version": 2,
-  "routes": [
-    {
-      "src": "/api/ranker",
-      "dest": "/api/ranker.js"
-    },
-    {
-      "src": "/api/hot-players",
-      "dest": "/api/hot-players.js"
-    },
-    {
-      "src": "/(.*)",
-      "dest": "/$1"
-    }
-  ]
+  "version": 2
 }
