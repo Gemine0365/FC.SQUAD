@@ -441,10 +441,11 @@
     let seasonMeta = [];
 
     document.addEventListener('DOMContentLoaded', () => {
-      fetchNexonMetadata();
-      initPitch();
-      initMarketChart();
-    });
+  fetchNexonMetadata();
+  checkApiStatus(); // <-- API 상태 검사 실행!
+  initPitch();
+  initMarketChart();
+});
 
     async function fetchNexonMetadata() {
       try {
