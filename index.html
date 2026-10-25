@@ -1404,7 +1404,7 @@
         /* ==========================================================================
            🔍 전적 검색 및 팀컬러 추첨기 & TOP 랭커 / 이적시장 핫 선수 NEXON API 연동
            ========================================================================== */
-        const NEXON_API_KEY = "ㅁㄴㅇ리;ㅏㅓㅇㄴㅁ리ㅏㅁ;ㅣㅏ 진짜 키";
+        
         // 1. TOP 랭커 데이터 연동
         // 스크립트 최상단에 선언해둔 NEXON_API_KEY를 공통으로 사용합니다.
 // const NEXON_API_KEY = "live_발급받으신_실제_API_KEY";
@@ -1437,66 +1437,56 @@ let playerMetaMap = {};
 
 // 1. TOP 랭커 데이터 연동 함수
 // 1. TOP 랭커 데이터 연동 함수
+
 async function fetchTopRankers() {
-    const container = document.getElementById('top-rankers-grid');
+    const container = document.getElementById("top-rankers-grid");
+
     container.innerHTML = `
-        <div class="col-span-full text-center py-6 text-gray-500 text-xs">
-            <i class="fa-solid fa-spinner animate-spin text-brand text-lg mb-2"></i><br>
-            실시간 인기 유저 API 연동 중...
+        <div class="col-span-full text-center py-6 text-gray-400 text-xs">
+            랭커 데이터를 확인하는 중입니다...
         </div>
     `;
 
     try {
-        const response = await fetch('/api/ranker');
-        
+        const response = await fetch("/api/ranker");
+        const data = await response.json().catch(() => ({}));
+
         if (!response.ok) {
-            throw new Error(`API 오류 (${response.status})`);
+            throw new Error(
+                data.error ||
+                data.message ||
+                `HTTP ${response.status}`
+            );
         }
 
-        const data = await response.json();
-        renderTopRankers(data);
+        if (!Array.isArray(data) || data.length === 0) {
+            throw new Error("랭커 데이터가 없거나 응답 형식이 올바르지 않습니다.");
+        }
 
-    } catch (err) {
-        console.warn('랭커 API 연동 실패:', err);
-        // 더미 데이터 대신 에러 메시지 표출
+        renderTopRankers(data);
+    } catch (error) {
+        console.error("랭커 조회 실패:", error);
+
         container.innerHTML = `
-            <div class="col-span-full text-center py-6 text-red-400 text-xs">
-                <i class="fa-solid fa-triangle-exclamation text-lg mb-2"></i><br>
-                랭커 정보를 불러올 수 없습니다. (${err.message})
+            <div class="col-span-full text-center py-6 text-amber-400 text-xs">
+                <i class="fa-solid fa-triangle-exclamation mb-2"></i>
+                <p>랭커 데이터를 불러오지 못했습니다.</p>
+                <p class="mt-2 text-gray-400">${escapeHtml(error.message)}</p>
             </div>
         `;
     }
 }
 
-        function renderTopRankers(rankers) {
-            const container = document.getElementById('top-rankers-grid');
-            const medalIcons = [
-                '<span class="text-amber-400 font-black">🥇 1위</span>',
-                '<span class="text-gray-300 font-black">🥈 2위</span>',
-                '<span class="text-amber-600 font-black">🥉 3위</span>',
-                '<span class="text-emerald-400 font-bold">4위</span>',
-                '<span class="text-emerald-400 font-bold">5위</span>'
-            ];
+function escapeHtml(value) {
+    return String(value).replace(/[&<>"']/g, char => ({
+        "&": "&amp;",
+        "<": "&lt;",
+        ">": "&gt;",
+        '"': "&quot;",
+        "'": "&#39;"
+    })[char]);
+}
 
-            container.innerHTML = rankers.map((r, i) => `
-                <div onclick="quickSearchRanker('${r.name}')" class="bg-darkbg-800 border border-gray-800 hover:border-brand/60 rounded-xl p-3 flex flex-col justify-between cursor-pointer transition-all hover:scale-105 hover:shadow-lg green-glow-sm group">
-                    <div class="flex items-center justify-between border-b border-gray-800/80 pb-2 mb-2">
-                        <span class="text-xs">${medalIcons[i]}</span>
-                        <span class="text-[10px] text-gray-400 font-mono">Lv.${r.level}</span>
-                    </div>
-
-                    <div class="my-1">
-                        <p class="text-sm font-bold text-white group-hover:text-brand transition-colors truncate">${r.name}</p>
-                        <p class="text-[11px] text-emerald-400 font-medium">${r.tier}</p>
-                    </div>
-
-                    <div class="pt-2 border-t border-gray-800/60 flex justify-between items-center text-[10px] text-gray-400">
-                        <span>승률 <strong class="text-white">${r.winRate}</strong></span>
-                        <span class="text-brand font-bold">조회 <i class="fa-solid fa-arrow-right text-[8px]"></i></span>
-                    </div>
-                </div>
-            `).join('');
-        }
 
         // 2. 🔥 이적시장 핫 선수 NEXON API 연동 (선수 시즌, 선수 이름, 가격 표시)
         let hotPlayersData = [
@@ -1512,46 +1502,68 @@ async function fetchTopRankers() {
 /* ==========================================================================
    🔥 이적시장 핫 선수 연동 (선수 수 확대 & 자동 매핑)
    ========================================================================== */
+
 async function fetchHotPlayers() {
-    const container = document.getElementById('hot-players-grid');
+    const container = document.getElementById("hot-players-grid");
+
     container.innerHTML = `
-        <div class="col-span-full text-center py-6 text-gray-500 text-xs">
-            <i class="fa-solid fa-spinner animate-spin text-red-500 text-lg mb-2"></i><br>
-            NEXON 이적시장 시세 API 연동 중...
+        <div class="col-span-full text-center py-6 text-gray-400 text-xs">
+            선수 데이터를 불러오는 중입니다...
         </div>
     `;
 
     try {
-        // 💡 limit=10으로 변경하여 핫 선수를 10명까지 가져옵니다. (필요시 15, 20으로 변경 가능)
-        const response = await fetch('/api/hot-players');
-        
+        const response = await fetch("/api/hot-players");
+        const data = await response.json().catch(() => ({}));
+
         if (!response.ok) {
-            throw new Error(`이적시장 API 호출 실패: ${response.status}`);
+            throw new Error(
+                data.message ||
+                data.error ||
+                `HTTP ${response.status}`
+            );
         }
 
-        const apiData = await response.json();
+        if (!Array.isArray(data) || data.length === 0) {
+            throw new Error("표시할 선수 데이터가 없습니다.");
+        }
 
-        // API 데이터를 화면용 형식으로 파싱
-        const formattedPlayers = apiData.map(item => {
-            // playerMetaMap에 선수가 없더라도 spid ID를 기반으로 자동 표시
-            const meta = playerMetaMap[item.spid] || { name: `선수 (ID: ${item.spid})`, season: "LIVE" };
-            
-            // BP 가격 단위 변환 (조/억 단위)
-            let priceText = "0 BP";
-            if (item.price >= 1000000000000) {
-                priceText = `${(item.price / 1000000000000).toFixed(1)}조 BP`;
-            } else if (item.price >= 100000000) {
-                priceText = `${Math.floor(item.price / 100000000).toLocaleString()}억 BP`;
-            }
+        const players = data.map(item => {
+            const meta = playerMetaMap[item.spid];
+
+            const price = Number(item.price);
+            const priceText = Number.isFinite(price)
+                ? price >= 1e12
+                    ? `${(price / 1e12).toFixed(1)}조 BP`
+                    : `${Math.floor(price / 1e8).toLocaleString()}억 BP`
+                : "시세 정보 없음";
+
+            const change = Number(item.priceChangeRatio);
 
             return {
                 spid: item.spid,
-                name: meta.name,
-                season: meta.season,
+                name: meta?.name || `선수 ID ${item.spid}`,
+                season: meta?.season || "시즌 정보 없음",
                 price: priceText,
-                trend: item.priceChangeRatio ? `${item.priceChangeRatio > 0 ? '+' : ''}${item.priceChangeRatio}%` : '+0.0%'
+                trend: Number.isFinite(change)
+                    ? `${change > 0 ? "+" : ""}${change}%`
+                    : "변동 정보 없음"
             };
         });
+
+        renderHotPlayers(players);
+    } catch (error) {
+        console.error("핫 선수 조회 실패:", error);
+
+        container.innerHTML = `
+            <div class="col-span-full text-center py-6 text-amber-400 text-xs">
+                <i class="fa-solid fa-triangle-exclamation mb-2"></i>
+                <p>이적시장 데이터를 불러오지 못했습니다.</p>
+                <p class="mt-2 text-gray-400">${escapeHtml(error.message)}</p>
+            </div>
+        `;
+    }
+}
 
         renderHotPlayers(formattedPlayers);
 
