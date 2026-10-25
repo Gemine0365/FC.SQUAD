@@ -155,63 +155,111 @@
 
     </section>
 
-    <!-- TAB 2: 스쿼드 분석 -->
-    <section id="tab-squad" class="hidden space-y-6">
-      <div class="bg-[#121824] border border-slate-800 rounded-2xl p-6">
-        <div class="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 mb-6">
-          <div>
-            <h2 class="text-xl font-bold text-white">
-              최소 교체 팀컬러 최적화 도우미
-            </h2>
-            <p class="text-slate-400 text-xs mt-1">
-              포메이션 및 선수를 직접 설정하여 최소 교체(1~2명)로 추가 팀컬러 보너스를 받는 조합을 찾아보세요.
-            </p>
-          </div>
+    <!-- TAB 2: 스쿼드 분석 (스쿼드 메이커 스타일) -->
+<section id="tab-squad" class="hidden space-y-6">
+  <div class="bg-[#121824] border border-slate-800 rounded-2xl p-6">
+    
+    <!-- Header & Title -->
+    <div class="mb-6">
+      <h2 class="text-xl font-bold text-white flex items-center gap-2">
+        🧩 스쿼드 분석 및 팀컬러 최적화
+      </h2>
+      <p class="text-slate-400 text-xs mt-1">
+        포메이션과 선수를 직접 배치하고, 최소 교체로 더 많은 팀컬러 능력치 보너스를 받아보세요.
+      </p>
+    </div>
 
-          <div class="flex items-center gap-2">
-            <span class="text-xs text-slate-400">포메이션:</span>
-            <select id="formation-select" onchange="changeFormation(this.value)" class="bg-slate-900 border border-slate-700 text-emerald-400 font-bold text-sm px-3 py-1.5 rounded-lg focus:outline-none">
-              <option value="4-3-3">4-3-3</option>
-              <option value="4-2-3-1" selected>4-2-3-1</option>
-              <option value="4-2-2-2">4-2-2-2</option>
-              <option value="3-5-2">3-5-2</option>
-            </select>
-          </div>
-        </div>
+    <!-- 스쿼드 메이커 상단 컨트롤 바 (이미지 디자인 반영) -->
+    <div class="bg-[#f3f4f6] text-slate-800 p-2.5 rounded-t-xl flex flex-wrap items-center justify-between gap-3 text-xs font-semibold shadow-inner border-b border-slate-300">
+      <div class="flex flex-wrap items-center gap-2">
+        <!-- 포메이션 선택 -->
+        <select id="formation-select" onchange="changeFormation(this.value)" class="bg-white border border-slate-300 rounded px-3 py-1.5 shadow-sm focus:outline-none text-slate-900 font-bold cursor-pointer">
+          <option value="4-4-2" selected>4-4-2</option>
+          <option value="4-2-3-1">4-2-3-1</option>
+          <option value="4-3-3">4-3-3</option>
+          <option value="4-2-2-2">4-2-2-2</option>
+        </select>
 
-        <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
-          <div class="lg:col-span-2 bg-[#090d14] border border-slate-800/80 rounded-2xl p-4 min-h-[500px] flex flex-col justify-between relative overflow-hidden">
-            <div id="squad-pitch" class="grid grid-cols-4 sm:grid-cols-5 gap-3 relative z-10 py-2">
-            </div>
-          </div>
+        <!-- 강화 개별 적용 -->
+        <select class="bg-white border border-slate-300 rounded px-3 py-1.5 shadow-sm focus:outline-none text-slate-700 cursor-pointer">
+          <option>강화 개별 적용</option>
+          <option>전체 +3강 적용</option>
+          <option>전체 +5강 적용</option>
+          <option>전체 +8강 적용</option>
+        </select>
 
-          <div class="space-y-4">
-            <div class="bg-slate-900/90 border border-slate-800 rounded-xl p-4 space-y-3">
-              <h3 class="text-xs font-bold text-slate-400 uppercase tracking-wider">현재 적용 팀컬러</h3>
-              <div id="active-team-colors" class="space-y-2">
-                <div class="flex items-center justify-between text-sm bg-slate-800/60 p-2 rounded border border-slate-700/50">
-                  <span class="font-bold text-emerald-400">레알 마드리드 (동빛)</span>
-                  <span class="text-xs text-slate-300">+2 (6명 적용)</span>
-                </div>
-              </div>
-            </div>
+        <!-- 기본/팀컬러 선택 -->
+        <select class="bg-white border border-slate-300 rounded px-3 py-1.5 shadow-sm focus:outline-none text-slate-700 cursor-pointer">
+          <option>기본</option>
+          <option>동빛 팀컬러</option>
+          <option>은빛 팀컬러</option>
+          <option>금빛 팀컬러</option>
+        </select>
 
-            <div class="bg-gradient-to-br from-emerald-950/40 to-slate-900 border border-emerald-500/30 rounded-xl p-4 space-y-3">
-              <div class="flex items-center gap-2 text-emerald-400 font-bold text-sm">
-                최소 교체 추천 (1명 교체)
-              </div>
-              <p class="text-xs text-slate-300 leading-relaxed" id="recommendation-text">
-                <strong class="text-emerald-300">ST 자리의 선수</strong>를 <span class="underline decoration-emerald-500 font-semibold">프랑스 국적 선수</span>로 교체 시, <strong class="text-white">'프랑스 대표팀' (전체 능력치 +3)</strong> 추가 팀컬러 보너스를 획득할 수 있습니다.
-              </p>
-              <button onclick="applyRecommendation()" class="w-full py-2 bg-emerald-500 hover:bg-emerald-400 text-slate-950 font-bold text-xs rounded-lg transition-colors">
-                추천 선수 적용하기
-              </button>
-            </div>
-          </div>
+        <!-- 색상 변경 -->
+        <div class="flex items-center gap-1 bg-white border border-slate-300 rounded px-2.5 py-1 shadow-sm">
+          <span>색상 변경</span>
+          <button class="w-4 h-4 bg-emerald-500 rounded-sm border border-slate-300 hover:scale-110 transition-transform"></button>
         </div>
       </div>
-    </section>
 
+      <!-- 금빛 특성 OFF 체크박스 -->
+      <div class="flex items-center gap-1.5 bg-white border border-slate-300 rounded px-3 py-1 shadow-sm">
+        <span>금빛 특성 OFF</span>
+        <input type="checkbox" class="w-4 h-4 accent-emerald-600 rounded cursor-pointer">
+      </div>
+    </div>
+
+    <!-- Main Builder & Analytics Grid -->
+    <div class="grid grid-cols-1 lg:grid-cols-3 gap-6 bg-[#1a1f2c] p-4 rounded-b-xl border border-slate-800 border-t-0">
+      
+      <!-- 3D 원근감 사다리꼴 경기장 (Left 2 Columns) -->
+      <div class="lg:col-span-2 relative min-h-[580px] bg-[#111620] rounded-xl overflow-hidden flex items-center justify-center p-4">
+        
+        <!-- Field Background with Perspective -->
+        <div class="absolute inset-x-6 top-4 bottom-4 bg-[#181c24] border-2 border-slate-700/60 rounded-lg shadow-2xl overflow-hidden transform perspective-[1000px] rotateX-[15deg] scale-95">
+          <!-- Field Lines -->
+          <div class="absolute inset-0 border-b-2 border-slate-700/40 top-1/2"></div>
+          <div class="absolute w-36 h-36 border-2 border-slate-700/40 rounded-full top-1/2 left-1/2 transform -translate-x-1/2 -translate-y-1/2"></div>
+          <!-- Penalty Boxes -->
+          <div class="absolute w-1/2 h-24 border-2 border-t-0 border-slate-700/40 top-0 left-1/4"></div>
+          <div class="absolute w-1/2 h-24 border-2 border-b-0 border-slate-700/40 bottom-0 left-1/4"></div>
+        </div>
+
+        <!-- Dynamic Pitch Slots Grid -->
+        <div id="squad-pitch" class="relative z-10 w-full h-full min-h-[520px]">
+          <!-- 선수 카드가 Javascript로 좌표에 맞게 배치됩니다 -->
+        </div>
+      </div>
+
+      <!-- Right Column: 팀컬러 분석 & 최소 교체 추천 -->
+      <div class="space-y-4">
+        <div class="bg-[#121824] border border-slate-800 rounded-xl p-4 space-y-3 shadow-lg">
+          <h3 class="text-xs font-bold text-slate-400 uppercase tracking-wider">현재 적용 팀컬러</h3>
+          <div id="active-team-colors" class="space-y-2">
+            <div class="flex items-center justify-between text-sm bg-slate-900/80 p-2.5 rounded-lg border border-slate-800">
+              <span class="font-bold text-emerald-400">레알 마드리드 (동빛)</span>
+              <span class="text-xs text-slate-300 font-medium">+2 (6명 적용)</span>
+            </div>
+          </div>
+        </div>
+
+        <div class="bg-gradient-to-br from-emerald-950/50 to-slate-900 border border-emerald-500/40 rounded-xl p-4 space-y-3 shadow-xl">
+          <div class="flex items-center gap-2 text-emerald-400 font-bold text-sm">
+            <span>💡</span> 최소 교체 추천 (1명 교체)
+          </div>
+          <p class="text-xs text-slate-300 leading-relaxed" id="recommendation-text">
+            <strong class="text-emerald-300">ST 자리의 선수</strong>를 <span class="underline decoration-emerald-500 font-semibold">프랑스 국적 선수</span>로 교체하면 <strong class="text-white">'프랑스 대표팀' (전체 능력치 +3)</strong> 추가 팀컬러 보너스를 획득할 수 있습니다!
+          </p>
+          <button onclick="applyRecommendation()" class="w-full py-2.5 bg-emerald-500 hover:bg-emerald-400 text-slate-950 font-bold text-xs rounded-lg transition-colors shadow-lg shadow-emerald-500/10">
+            추천 선수 적용하기
+          </button>
+        </div>
+      </div>
+
+    </div>
+  </div>
+</section>
     <!-- TAB 3: 이적시장 시세 분석 -->
     <section id="tab-market" class="hidden space-y-6">
       <div class="bg-[#121824] border border-slate-800 rounded-2xl p-6 max-w-4xl mx-auto space-y-6">
