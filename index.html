@@ -1439,31 +1439,25 @@ let playerMetaMap = {};
 // 1. TOP 랭커 데이터 연동 함수
 
 async function fetchTopRankers() {
-    const container = document.getElementById("top-rankers-grid");
-
-    container.innerHTML = `
-        <div class="col-span-full text-center py-6 text-gray-400 text-xs">
-            랭커 데이터를 확인하는 중입니다...
-        </div>
-    `;
-
     try {
-        const response = await fetch("/api/ranker");
-        const data = await response.json().catch(() => ({}));
-
-        if (!response.ok) {
-            throw new Error(
-                data.error ||
-                data.message ||
-                `HTTP ${response.status}`
-            );
+        const response = await fetch('/api/ranker');
+        if (!response.ok) throw new Error(`HTTP ${response.status}`);
+        
+        const data = await response.json();
+        
+        // 넥슨 API 응답 데이터 처리 (배열이 직접 오거나 객체 내 배열로 오는 경우 모두 지원)
+        const rankers = Array.isArray(data) ? data : (data.rankers || data.data || []);
+        
+        if (!rankers || rankers.length === 0) {
+            throw new Error('랭커 데이터가 없습니다.');
         }
 
-        if (!Array.isArray(data) || data.length === 0) {
-            throw new Error("랭커 데이터가 없거나 응답 형식이 올바르지 않습니다.");
-        }
-
-        renderTopRankers(data);
+        // 이후 데이터 렌더링 로직...
+        renderRankers(rankers.slice(0, 5));
+    } catch (error) {
+        console.error('랭커 조회 실패:', error);
+    }
+}
     } catch (error) {
         console.error("랭커 조회 실패:", error);
 
@@ -1504,54 +1498,25 @@ function escapeHtml(value) {
    ========================================================================== */
 
 async function fetchHotPlayers() {
-    const container = document.getElementById("hot-players-grid");
-
-    container.innerHTML = `
-        <div class="col-span-full text-center py-6 text-gray-400 text-xs">
-            선수 데이터를 불러오는 중입니다...
-        </div>
-    `;
-
     try {
-        const response = await fetch("/api/hot-players");
-        const data = await response.json().catch(() => ({}));
-
-        if (!response.ok) {
-            throw new Error(
-                data.message ||
-                data.error ||
-                `HTTP ${response.status}`
-            );
+        const response = await fetch('/api/hot-players');
+        if (!response.ok) throw new Error(`HTTP ${response.status}`);
+        
+        const data = await response.json();
+        
+        // 핫 선수 응답 처리
+        const players = Array.isArray(data) ? data : (data.players || data.data || []);
+        
+        if (!players || players.length === 0) {
+            throw new Error('표시할 선수 데이터가 없습니다.');
         }
 
-        if (!Array.isArray(data) || data.length === 0) {
-            throw new Error("표시할 선수 데이터가 없습니다.");
-        }
-
-        const players = data.map(item => {
-            const meta = playerMetaMap[item.spid];
-
-            const price = Number(item.price);
-            const priceText = Number.isFinite(price)
-                ? price >= 1e12
-                    ? `${(price / 1e12).toFixed(1)}조 BP`
-                    : `${Math.floor(price / 1e8).toLocaleString()}억 BP`
-                : "시세 정보 없음";
-
-            const change = Number(item.priceChangeRatio);
-
-            return {
-                spid: item.spid,
-                name: meta?.name || `선수 ID ${item.spid}`,
-                season: meta?.season || "시즌 정보 없음",
-                price: priceText,
-                trend: Number.isFinite(change)
-                    ? `${change > 0 ? "+" : ""}${change}%`
-                    : "변동 정보 없음"
-            };
-        });
-
+        // 이후 데이터 렌더링 로직...
         renderHotPlayers(players);
+    } catch (error) {
+        console.error('핫 선수 조회 실패:', error);
+    }
+}
     } catch (error) {
         console.error("핫 선수 조회 실패:", error);
         
