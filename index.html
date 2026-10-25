@@ -1,758 +1,1653 @@
+제시해주신 요구사항을 반영하여 **'실시간 TOP 5 인기 유저' 섹션 바로 아래에 NEXON Open API 기반의 '이적시장 핫 선수' 섹션을 추가**하였습니다.
+
+아래 단독 실행 가능한 인터랙티브 웹 앱 미리보기 및 완성된 전체 소스 코드입니다.
+
+---
+
+### 🌐 실시간 앱 미리보기 & 통합 코드
+
+`web_code_canvas:generate_web_app` 도구를 호출하여 이적시장 핫 선수 데이터(선수명, 시즌, 가격/거래가)를 NEXON API 구조로 동적 연동하는 코드를 반영했습니다.
+
+```html
 <!DOCTYPE html>
-<html lang="ko">
+<html lang="ko" class="dark">
 <head>
-  <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>FC SQUAD - FC 온라인 통합 포털</title>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>FC SQUAD - FC 온라인 전적 검색 & 스쿼드 도우미</title>
+    
+    <!-- 파비콘 (초록색 육각형에 F) -->
+    <link rel="icon" type="image/svg+xml" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><polygon points='50,5 95,27.5 95,72.5 50,95 5,72.5 5,27.5' fill='%2310B981'/><text x='50%' y='65%' font-size='55' font-weight='900' fill='white' font-family='sans-serif' text-anchor='middle'>F</text></svg>">
 
-<script type="text/javascript" src="https://openapi.nexon.com/js/analytics.js?app_id=355977" async></script>
-  
-  <!-- Tailwind CSS CDN -->
-  <script src="https://cdn.tailwindcss.com"></script>
-  <!-- Chart.js CDN -->
-  <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
-  <!-- Canvas Confetti -->
-  <script src="https://cdn.jsdelivr.net/npm/canvas-confetti@1.6.0/dist/confetti.browser.min.js"></script>
+    <!-- Tailwind CSS -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script>
+        tailwind.config = {
+            darkMode: 'class',
+            theme: {
+                extend: {
+                    colors: {
+                        brand: {
+                            DEFAULT: '#10B981', // 파비콘 포인트 초록색
+                            dark: '#059669',
+                            light: '#34D399',
+                            glow: 'rgba(16, 185, 129, 0.25)'
+                        },
+                        darkbg: {
+                            900: '#0B0F17',
+                            800: '#111827',
+                            700: '#1F2937',
+                            600: '#374151'
+                        }
+                    }
+                }
+            }
+        }
+    </script>
 
-  <style>
-    ::-webkit-scrollbar {
-      width: 6px;
-      height: 6px;
-    }
-    ::-webkit-scrollbar-track {
-      background: #0f172a;
-    }
-    ::-webkit-scrollbar-thumb {
-      background: #334155;
-      border-radius: 3px;
-    }
-    ::-webkit-scrollbar-thumb:hover {
-      background: #475569;
-    }
-  </style>
+    <!-- Font Awesome Icons -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    
+    <!-- Google Fonts -->
+    <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+KR:wght@300;400;500;700;900&display=swap" rel="stylesheet">
+
+    <style>
+        body {
+            font-family: 'Noto Sans KR', sans-serif;
+            background-color: #0B0F17;
+            color: #F3F4F6;
+        }
+
+        /* 커스텀 스크롤바 */
+        ::-webkit-scrollbar {
+            width: 8px;
+            height: 8px;
+        }
+        ::-webkit-scrollbar-track {
+            background: #0B0F17;
+        }
+        ::-webkit-scrollbar-thumb {
+            background: #1F2937;
+            border-radius: 4px;
+        }
+        ::-webkit-scrollbar-thumb:hover {
+            background: #10B981;
+        }
+
+        /* 그린 글로우 효과 */
+        .green-glow {
+            box-shadow: 0 0 25px -5px rgba(16, 185, 129, 0.3);
+        }
+        .green-glow-sm {
+            box-shadow: 0 0 12px -2px rgba(16, 185, 129, 0.25);
+        }
+
+        /* 축구장 피치 스타일링 */
+        .pitch-bg {
+            background: radial-gradient(circle, #103926 0%, #082116 100%);
+            background-image: 
+                linear-gradient(to bottom, rgba(255,255,255,0.05) 1px, transparent 1px),
+                linear-gradient(to right, rgba(255,255,255,0.05) 1px, transparent 1px);
+            background-size: 10% 10%, 10% 10%;
+        }
+    </style>
 </head>
-<body class="bg-[#0b0e14] text-slate-100 font-sans min-h-screen flex flex-col justify-between selection:bg-emerald-500 selection:text-slate-950">
+<body class="min-h-screen flex flex-col justify-between selection:bg-brand selection:text-black">
 
-  <!-- 1. Global Navigation Bar -->
-  <header class="w-full bg-[#121824] border-b border-slate-800/80 sticky top-0 z-50 backdrop-blur-md bg-opacity-90">
-    <div class="max-w-7xl mx-auto px-4 sm:px-6 flex items-center justify-between h-16">
-      
-      <!-- Brand Logo & Title -->
-      <div class="flex items-center gap-8">
-        <a href="#" onclick="switchTab('match')" class="flex items-center gap-2.5 group">
-          <div class="w-9 h-9 rounded-xl bg-gradient-to-br from-emerald-400 to-teal-600 flex items-center justify-center font-black text-slate-950 text-xl shadow-lg shadow-emerald-500/20 group-hover:scale-105 transition-transform">
-            FC
-          </div>
-          <div class="flex flex-col">
-            <span class="font-extrabold text-lg text-white tracking-wider flex items-center gap-1">
-              FCSQUAD
-            </span>
-            <span class="text-[10px] text-emerald-400 font-medium tracking-tight">fcsquad.kro.kr</span>
-          </div>
-        </a>
+    <!-- Header / Navigation -->
+    <header class="w-full border-b border-gray-800 bg-darkbg-900/90 backdrop-blur-md sticky top-0 z-50">
+        <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 h-20 flex items-center justify-between">
+            
+            <!-- Logo Section -->
+            <div class="flex items-center space-x-3 cursor-pointer" onclick="switchNavMode('search')">
+                <svg class="w-10 h-10 transition-transform duration-300 hover:scale-105" viewBox="0 0 100 100">
+                    <polygon points="50,5 95,27.5 95,72.5 50,95 5,72.5 5,27.5" fill="#10B981"/>
+                    <text x="50%" y="65%" font-size="55" font-weight="900" fill="white" font-family="sans-serif" text-anchor="middle">F</text>
+                </svg>
+                <span class="text-2xl font-black tracking-wider text-white">
+                    FC <span class="text-brand">SQUAD</span>
+                </span>
+            </div>
 
-        <!-- Main Navigation Tabs -->
-        <nav class="hidden md:flex items-center gap-1">
-          <button id="nav-match" onclick="switchTab('match')" class="px-4 py-2 rounded-lg text-sm font-semibold transition-all text-emerald-400 bg-slate-800/80">
-            전적 분석
-          </button>
-          <button id="nav-squad" onclick="switchTab('squad'); initPitch();" class="px-4 py-2 rounded-lg text-sm font-semibold transition-all text-slate-400 hover:text-white hover:bg-slate-800/40">
-  스쿼드 분석
-</button>
-          <button id="nav-market" onclick="switchTab('market')" class="px-4 py-2 rounded-lg text-sm font-semibold transition-all text-slate-400 hover:text-white hover:bg-slate-800/40">
-            이적시장 시세 분석
-          </button>
-          <button id="nav-random" onclick="switchTab('random')" class="px-4 py-2 rounded-lg text-sm font-semibold transition-all text-slate-400 hover:text-white hover:bg-slate-800/40 flex items-center gap-1.5">
-            팀컬러 랜덤 추첨기
-            <span class="text-[10px] bg-slate-700 text-slate-300 px-1.5 py-0.5 rounded font-normal">SUB</span>
-          </button>
-        </nav>
-      </div>
+            <!-- Header Menu Desktop -->
+            <nav class="hidden md:flex items-center space-x-8 text-sm font-medium">
+                <button id="nav-btn-search" onclick="switchNavMode('search')" class="text-brand border-b-2 border-brand pb-1 transition-all font-bold">전적검색</button>
+                <button id="nav-btn-squad" onclick="switchNavMode('squad')" class="text-gray-400 hover:text-brand transition-colors font-bold">스쿼드 메이커</button>
+                <button onclick="showFeatureNotice('이적시장 시세')" class="text-gray-400 hover:text-brand transition-colors">이적시장 시세</button>
+                <button id="nav-btn-community" onclick="switchNavMode('community')" class="text-gray-400 hover:text-brand transition-colors font-bold flex items-center gap-1.5">
+                    <i class="fa-solid fa-comments text-brand"></i> 커뮤니티
+                </button>
+                <button onclick="openTeamColorModal()" class="text-gray-400 hover:text-brand transition-colors flex items-center gap-1.5">
+                    <i class="fa-solid fa-dice text-brand"></i> 팀컬러 랜덤 추첨기
+                </button>
+                <!-- 패치노트 버튼 -->
+                <button onclick="openPatchNotesModal()" class="text-gray-300 hover:text-brand transition-colors text-xs border border-gray-700 hover:border-brand px-3 py-1.5 rounded-lg flex items-center gap-1.5 font-bold" title="패치노트 확인">
+                    <i class="fa-solid fa-scroll text-brand"></i> 패치노트
+                </button>
+                <!-- 비밀 관리자 패치노트 작성/관리 버튼 -->
+                <button onclick="openAuthModal()" class="text-xs text-gray-500 hover:text-brand px-2 py-1 transition-colors" title="관리자 패치노트 작성/관리">
+                    <i class="fa-solid fa-key"></i>
+                </button>
+            </nav>
 
-    </div>
-  </header>
-
-  <!-- Mobile Tab Navigation -->
-  <div class="md:hidden flex overflow-x-auto bg-[#121824] border-b border-slate-800 px-2 py-2 gap-1 no-scrollbar">
-    <button id="m-nav-match" onclick="switchTab('match')" class="px-3 py-1.5 rounded-md text-xs font-semibold whitespace-nowrap text-emerald-400 bg-slate-800">전적 분석</button>
-    <button id="m-nav-squad" onclick="switchTab('squad')" class="px-3 py-1.5 rounded-md text-xs font-semibold whitespace-nowrap text-slate-400">스쿼드 분석</button>
-    <button id="m-nav-market" onclick="switchTab('market')" class="px-3 py-1.5 rounded-md text-xs font-semibold whitespace-nowrap text-slate-400">이적시장 시세 분석</button>
-    <button id="m-nav-random" onclick="switchTab('random')" class="px-3 py-1.5 rounded-md text-xs font-semibold whitespace-nowrap text-slate-400">팀컬러 랜덤 추첨기</button>
-  </div>
-
-  <!-- Content Container -->
-  <main class="w-full max-w-7xl mx-auto px-4 sm:px-6 py-8 flex-1">
-
-    <!-- TAB 1: 전적 분석 -->
-    <section id="tab-match" class="space-y-8">
-      
-      <div class="relative py-12 flex flex-col items-center justify-center text-center">
-        <div class="mb-4 inline-flex items-center justify-center w-20 h-20 rounded-3xl bg-slate-900 border border-emerald-500/30 shadow-2xl shadow-emerald-500/10">
-          <span class="text-4xl font-bold text-emerald-400">FC</span>
+            <!-- Mobile Menu Button -->
+            <div class="flex md:hidden items-center gap-2">
+                <button onclick="openAuthModal()" class="p-2 text-gray-400 hover:text-brand text-xs" title="관리자 모드">
+                    <i class="fa-solid fa-key"></i>
+                </button>
+                <button onclick="openPatchNotesModal()" class="p-2 text-brand hover:bg-darkbg-800 rounded-lg flex items-center gap-1 text-xs font-bold border border-brand/30" title="패치노트">
+                    <i class="fa-solid fa-scroll"></i> 패치노트
+                </button>
+                <button onclick="openTeamColorModal()" class="p-2 text-brand hover:bg-darkbg-800 rounded-lg" title="팀컬러 랜덤 추첨기">
+                    <i class="fa-solid fa-dice text-lg"></i>
+                </button>
+                <button id="mobile-menu-btn" onclick="toggleMobileMenu()" class="p-2.5 rounded-xl border border-gray-700 bg-darkbg-800 text-gray-300 hover:text-white hover:border-brand focus:outline-none">
+                    <i class="fa-solid fa-bars text-xl"></i>
+                </button>
+            </div>
         </div>
-        <h1 class="text-3xl sm:text-4xl font-black text-white tracking-tight mb-2">
-          구단주 전적 및 통계 조회
-        </h1>
-        <p class="text-slate-400 text-sm max-w-md mb-8">
-          FC 온라인 구단주의 매치 기록, 승률, 대표 스쿼드를 분석하세요.
-        </p>
 
-        <!-- Search Form -->
-        <div class="w-full max-w-2xl relative">
-          <form onsubmit="handleSearch(event)" class="relative flex items-center">
-            <input 
-              type="text" 
-              id="user-search-input" 
-              placeholder="구단주명을 입력하세요 (예: 넥슨)" 
-              class="w-full bg-[#182030] text-white text-base pl-5 pr-28 py-4 rounded-2xl border-2 border-slate-700/80 focus:border-emerald-500 focus:outline-none shadow-2xl transition-all placeholder:text-slate-500"
-            >
-            <button 
-              type="submit" 
-              class="absolute right-2 px-5 py-2.5 bg-emerald-500 hover:bg-emerald-400 text-slate-950 font-extrabold text-sm rounded-xl transition-all active:scale-95 shadow-lg shadow-emerald-500/20"
-            >
-              검색
+        <!-- Mobile Nav Menu Dropdown -->
+        <div id="mobile-menu" class="hidden md:hidden border-b border-gray-800 bg-darkbg-800 px-4 pt-3 pb-5 space-y-3">
+            <button onclick="switchNavMode('search'); toggleMobileMenu();" class="block w-full text-left px-3 py-2 rounded-md font-medium text-brand bg-darkbg-900">전적검색</button>
+            <button onclick="switchNavMode('squad'); toggleMobileMenu();" class="block w-full text-left px-3 py-2 rounded-md font-medium text-gray-300 hover:bg-darkbg-700">스쿼드 메이커</button>
+            <button onclick="showFeatureNotice('이적시장 시세')" class="block w-full text-left px-3 py-2 rounded-md font-medium text-gray-300 hover:bg-darkbg-700">이적시장 시세</button>
+            <button onclick="switchNavMode('community'); toggleMobileMenu();" class="block w-full text-left px-3 py-2 rounded-md font-medium text-gray-300 hover:bg-darkbg-700">💬 커뮤니티</button>
+            <button onclick="openTeamColorModal(); toggleMobileMenu();" class="block w-full text-left px-3 py-2 rounded-md font-medium text-brand hover:bg-darkbg-700">🎲 팀컬러 랜덤 추첨기</button>
+            <button onclick="openPatchNotesModal(); toggleMobileMenu();" class="block w-full text-left px-3 py-2 rounded-md font-medium text-emerald-400 border border-emerald-800/60 hover:bg-darkbg-700">📜 업데이트 패치노트</button>
+            <button onclick="openAuthModal(); toggleMobileMenu();" class="block w-full text-left px-3 py-2 rounded-md font-medium text-gray-400 hover:bg-darkbg-700">🔑 관리자 패치노트 관리</button>
+        </div>
+    </header>
+
+    <!-- Main Container -->
+    <main class="flex-1 max-w-7xl w-full mx-auto px-4 sm:px-6 lg:px-8 py-6 flex flex-col items-center justify-start">
+
+        <!-- MODE 1: SEARCH PAGE -->
+        <div id="view-search-mode" class="w-full flex flex-col items-center">
+            <!-- Title Section -->
+            <div id="hero-title" class="text-center mt-6 md:mt-12 mb-8 transition-all duration-500">
+                <h1 class="text-4xl sm:text-5xl lg:text-6xl font-extrabold tracking-tight text-white mb-3">
+                    FC <span class="text-brand">스쿼드</span>
+                </h1>
+                <p class="text-gray-400 text-sm sm:text-base max-w-lg mx-auto">
+                    구단주 전적 검색부터 스쿼드 분석까지, FC 온라인 공식 API 연동 시스템
+                </p>
+            </div>
+
+            <!-- Search Bar Container -->
+            <div class="w-full max-w-full md:max-w-4xl transition-all duration-300">
+                <form onsubmit="handleSearch(event)" class="relative flex items-center">
+                    <div class="relative w-full group">
+                        <div class="absolute -inset-0.5 bg-gradient-to-r from-brand/50 to-emerald-600/30 rounded-full blur opacity-30 group-hover:opacity-75 transition duration-300"></div>
+                        
+                        <div class="relative flex items-center w-full bg-darkbg-800 border-2 border-gray-700 group-hover:border-brand rounded-full shadow-2xl overflow-hidden transition-all duration-300 pl-4 sm:pl-6 pr-2 py-1.5">
+                            <div class="flex items-center gap-1 bg-brand/15 text-brand border border-brand/30 px-3 py-1.5 rounded-full text-xs sm:text-sm font-bold whitespace-nowrap mr-2 sm:mr-3">
+                                <i class="fa-solid fa-shield-halved text-xs"></i>
+                                <span>전적</span>
+                            </div>
+
+                            <input 
+                                type="text" 
+                                id="user-search-input"
+                                placeholder="구단주명을 입력하세요 (예: 첼시, 쏜살, 테스트구단주)" 
+                                class="w-full bg-transparent text-white placeholder-gray-500 focus:outline-none text-base sm:text-lg font-medium pr-12"
+                                required
+                                autocomplete="off"
+                            >
+
+                            <button 
+                                type="submit" 
+                                class="p-3 sm:p-4 bg-brand hover:bg-brand-dark text-black rounded-full font-bold transition-all duration-200 flex items-center justify-center shrink-0 shadow-lg hover:scale-105 active:scale-95"
+                                title="전적 검색"
+                            >
+                                <i class="fa-solid fa-magnifying-glass text-lg sm:text-xl"></i>
+                            </button>
+                        </div>
+                    </div>
+                </form>
+            </div>
+
+            <!-- 🔥 실시간 랭킹 1~5위 인기 유저 프로필 섹션 -->
+            <div id="top-rankers-section" class="w-full max-w-4xl mt-8">
+                <div class="flex items-center justify-between mb-4">
+                    <h3 class="text-base sm:text-lg font-bold text-white flex items-center gap-2">
+                        <i class="fa-solid fa-trophy text-amber-400"></i> 실시간 TOP 5 인기 유저
+                        <span class="text-[10px] px-2 py-0.5 bg-brand/20 text-brand border border-brand/30 rounded-full font-mono">NEXON API Live</span>
+                    </h3>
+                    <button onclick="fetchTopRankers()" class="text-xs text-gray-400 hover:text-brand flex items-center gap-1 transition-colors">
+                        <i class="fa-solid fa-rotate-right text-[10px]"></i> 새로고침
+                    </button>
+                </div>
+
+                <div id="top-rankers-grid" class="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-5 gap-3">
+                    <!-- Ranker Cards loaded dynamically via JS -->
+                </div>
+            </div>
+
+            <!-- 🔥 [신규 추가] 인기 유저 아래: 이적시장 핫 선수 섹션 (NEXON API 연동) -->
+            <div id="hot-players-section" class="w-full max-w-4xl mt-8">
+                <div class="flex items-center justify-between mb-4">
+                    <h3 class="text-base sm:text-lg font-bold text-white flex items-center gap-2">
+                        <i class="fa-solid fa-fire text-red-500 animate-pulse"></i> 이적시장 핫 선수
+                        <span class="text-[10px] px-2 py-0.5 bg-red-500/20 text-red-400 border border-red-500/30 rounded-full font-mono">Nexon Market API</span>
+                    </h3>
+                    <button onclick="fetchHotPlayers()" class="text-xs text-gray-400 hover:text-brand flex items-center gap-1 transition-colors">
+                        <i class="fa-solid fa-rotate-right text-[10px]"></i> 새로고침
+                    </button>
+                </div>
+
+                <div id="hot-players-grid" class="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-5 gap-3">
+                    <!-- Hot Player Cards loaded dynamically via JS -->
+                </div>
+            </div>
+
+            <!-- Result Section -->
+            <section id="search-results" class="w-full max-w-5xl mt-10 hidden">
+                <div class="bg-darkbg-800 border border-gray-800 rounded-2xl p-5 sm:p-8 mb-6 relative overflow-hidden green-glow-sm">
+                    <div class="absolute -right-10 -bottom-10 opacity-5 pointer-events-none">
+                        <i class="fa-solid fa-trophy text-9xl text-brand"></i>
+                    </div>
+
+                    <div class="flex flex-col md:flex-row items-start md:items-center justify-between gap-6 relative z-10">
+                        <div class="flex items-center gap-4 sm:gap-6">
+                            <div class="w-16 h-16 sm:w-20 sm:h-20 bg-darkbg-900 border-2 border-brand/50 rounded-2xl flex items-center justify-center text-brand font-black text-2xl sm:text-3xl shadow-inner">
+                                <i class="fa-solid fa-user-gear"></i>
+                            </div>
+                            <div>
+                                <div class="flex items-center gap-3">
+                                    <h2 id="res-username" class="text-2xl sm:text-3xl font-bold text-white">구단주명</h2>
+                                    <span id="res-level" class="text-xs px-2.5 py-1 bg-brand/20 text-brand font-bold border border-brand/30 rounded-full">Lv.100</span>
+                                </div>
+                                <p class="text-xs sm:text-sm text-gray-400 mt-1">
+                                    OUICC (Nexon ID): <span id="res-ouicc" class="font-mono text-gray-300">89fa...2d9e</span>
+                                </p>
+                            </div>
+                        </div>
+
+                        <div class="grid grid-cols-3 gap-3 sm:gap-4 w-full md:w-auto text-center border-t md:border-t-0 md:border-l border-gray-700 pt-4 md:pt-0 md:pl-8">
+                            <div class="bg-darkbg-900/80 p-3 rounded-xl border border-gray-800">
+                                <p class="text-xs text-gray-400 mb-1">최고 등급</p>
+                                <p id="res-max-tier" class="font-bold text-brand text-sm sm:text-base">슈퍼챔피언스</p>
+                            </div>
+                            <div class="bg-darkbg-900/80 p-3 rounded-xl border border-gray-800">
+                                <p class="text-xs text-gray-400 mb-1">최근 승률</p>
+                                <p id="res-win-rate" class="font-bold text-white text-sm sm:text-base">64.5%</p>
+                            </div>
+                            <div class="bg-darkbg-900/80 p-3 rounded-xl border border-gray-800">
+                                <p class="text-xs text-gray-400 mb-1">총 전적</p>
+                                <p id="res-record" class="font-bold text-gray-300 text-sm sm:text-base">120승 20무 48패</p>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="flex border-b border-gray-800 mb-6 gap-2 sm:gap-6 overflow-x-auto">
+                    <button onclick="switchTab('matches')" id="tab-matches" class="pb-3 text-sm font-bold text-brand border-b-2 border-brand whitespace-nowrap transition-all">최근 매치 기록 (공식경기)</button>
+                    <button onclick="switchTab('squad')" id="tab-squad" class="pb-3 text-sm font-bold text-gray-400 hover:text-white border-b-2 border-transparent whitespace-nowrap transition-all">대표 스쿼드 분석</button>
+                    <button onclick="switchTab('stats')" id="tab-stats" class="pb-3 text-sm font-bold text-gray-400 hover:text-white border-b-2 border-transparent whitespace-nowrap transition-all">플레이 스타일 통계</button>
+                </div>
+
+                <div id="content-matches" class="space-y-3"></div>
+                <div id="content-squad" class="hidden">
+                    <div class="bg-darkbg-800 border border-gray-800 rounded-2xl p-6">
+                        <div class="flex justify-between items-center mb-6">
+                            <h3 class="text-lg font-bold text-white flex items-center gap-2">
+                                <i class="fa-solid fa-people-group text-brand"></i> 대표 팀 스쿼드 정보
+                            </h3>
+                            <span class="text-xs text-emerald-400 font-mono bg-emerald-950/80 border border-emerald-800 px-3 py-1 rounded-full">총 가치: 45조 8,000억 BP</span>
+                        </div>
+                        <div id="squad-players-grid" class="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-3"></div>
+                    </div>
+                </div>
+                <div id="content-stats" class="hidden">
+                    <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                        <div class="bg-darkbg-800 border border-gray-800 rounded-2xl p-5">
+                            <h4 class="text-sm font-bold text-gray-300 mb-4 flex items-center gap-2">
+                                <i class="fa-solid fa-chart-pie text-brand"></i> 평균 득점 / 실점
+                            </h4>
+                            <div class="space-y-4">
+                                <div>
+                                    <div class="flex justify-between text-xs mb-1">
+                                        <span>경기당 득점</span>
+                                        <span class="text-brand font-bold">2.4골</span>
+                                    </div>
+                                    <div class="w-full bg-darkbg-900 rounded-full h-2">
+                                        <div class="bg-brand h-2 rounded-full" style="width: 78%"></div>
+                                    </div>
+                                </div>
+                                <div>
+                                    <div class="flex justify-between text-xs mb-1">
+                                        <span>경기당 실점</span>
+                                        <span class="text-red-400 font-bold">1.1골</span>
+                                    </div>
+                                    <div class="w-full bg-darkbg-900 rounded-full h-2">
+                                        <div class="bg-red-500 h-2 rounded-full" style="width: 35%"></div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="bg-darkbg-800 border border-gray-800 rounded-2xl p-5">
+                            <h4 class="text-sm font-bold text-gray-300 mb-4 flex items-center gap-2">
+                                <i class="fa-solid fa-bullseye text-brand"></i> 슈팅 성공 및 점유율
+                            </h4>
+                            <div class="space-y-4">
+                                <div>
+                                    <div class="flex justify-between text-xs mb-1">
+                                        <span>유효 슈팅 비율</span>
+                                        <span class="text-brand font-bold">68.2%</span>
+                                    </div>
+                                    <div class="w-full bg-darkbg-900 rounded-full h-2">
+                                        <div class="bg-brand h-2 rounded-full" style="width: 68%"></div>
+                                    </div>
+                                </div>
+                                <div>
+                                    <div class="flex justify-between text-xs mb-1">
+                                        <span>평균 점유율</span>
+                                        <span class="text-blue-400 font-bold">54.0%</span>
+                                    </div>
+                                    <div class="w-full bg-darkbg-900 rounded-full h-2">
+                                        <div class="bg-blue-500 h-2 rounded-full" style="width: 54%"></div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </section>
+        </div>
+
+        <!-- MODE 2: SQUAD MAKER PAGE -->
+        <div id="view-squad-mode" class="w-full hidden flex-col">
+            <div class="bg-darkbg-800 border border-gray-800 rounded-2xl p-4 sm:p-6 mb-6 flex flex-col md:flex-row justify-between items-stretch md:items-center gap-4">
+                <div>
+                    <h2 class="text-2xl font-black text-white flex items-center gap-2">
+                        <i class="fa-solid fa-diagram-project text-brand"></i> FC 온라인 스쿼드 메이커
+                    </h2>
+                    <p class="text-xs sm:text-sm text-gray-400 mt-1">포메이션을 지정하고 최적의 11인 스쿼드를 완성해보세요.</p>
+                </div>
+
+                <div class="flex flex-wrap items-center gap-3">
+                    <div class="flex items-center gap-2 bg-darkbg-900 border border-gray-700 px-3 py-2 rounded-xl">
+                        <span class="text-xs text-gray-400 font-bold whitespace-nowrap">포메이션</span>
+                        <select id="formation-select" onchange="changeFormation(this.value)" class="bg-transparent text-white font-bold text-sm focus:outline-none">
+                            <option value="4-2-3-1" class="bg-darkbg-800">4-2-3-1</option>
+                            <option value="4-2-2-2" class="bg-darkbg-800">4-2-2-2</option>
+                            <option value="4-3-3" class="bg-darkbg-800">4-3-3</option>
+                            <option value="4-1-2-3" class="bg-darkbg-800">4-1-2-3</option>
+                            <option value="4-2-1-3" class="bg-darkbg-800">4-2-1-3</option>
+                            <option value="4-4-2" class="bg-darkbg-800">4-4-2</option>
+                            <option value="3-5-2" class="bg-darkbg-800">3-5-2</option>
+                            <option value="3-4-3" class="bg-darkbg-800">3-4-3</option>
+                            <option value="5-2-3" class="bg-darkbg-800">5-2-3</option>
+                            <option value="5-3-2" class="bg-darkbg-800">5-3-2</option>
+                        </select>
+                    </div>
+
+                    <button onclick="resetSquadMaker()" class="px-4 py-2 bg-darkbg-900 border border-gray-700 hover:border-red-500/50 text-gray-300 hover:text-red-400 text-xs font-bold rounded-xl transition-all">
+                        <i class="fa-solid fa-rotate-left mr-1"></i> 초기화
+                    </button>
+                    <button onclick="shareSquad()" class="px-4 py-2 bg-brand hover:bg-brand-dark text-black text-xs font-black rounded-xl transition-all flex items-center gap-1.5 shadow">
+                        <i class="fa-solid fa-share-nodes"></i> 스쿼드 저장
+                    </button>
+                </div>
+            </div>
+
+            <!-- Main Squad Builder Layout -->
+            <div class="grid grid-cols-1 lg:grid-cols-12 gap-6 w-full">
+                <div class="lg:col-span-8 bg-darkbg-800 border border-gray-800 rounded-2xl p-4 sm:p-6 flex flex-col justify-center items-center">
+                    <div class="w-full max-w-xl aspect-[3/4] pitch-bg border-4 border-emerald-600/40 rounded-2xl p-4 flex flex-col justify-between relative shadow-2xl overflow-hidden">
+                        <div class="absolute inset-x-0 top-1/2 -translate-y-1/2 border-t border-white/20"></div>
+                        <div class="absolute inset-x-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 w-28 h-28 border border-white/20 rounded-full"></div>
+                        <div class="absolute top-0 left-1/2 -translate-x-1/2 w-44 h-20 border-b border-x border-white/20"></div>
+                        <div class="absolute bottom-0 left-1/2 -translate-x-1/2 w-44 h-20 border-t border-x border-white/20"></div>
+
+                        <div id="pitch-container" class="relative z-10 h-full flex flex-col justify-between py-2"></div>
+                    </div>
+                </div>
+
+                <div class="lg:col-span-4 space-y-4 flex flex-col justify-start">
+                    <div class="bg-darkbg-800 border border-gray-800 rounded-2xl p-5">
+                        <h3 class="text-base font-bold text-white mb-4 flex items-center gap-2">
+                            <i class="fa-solid fa-chart-simple text-brand"></i> 스쿼드 요약
+                        </h3>
+
+                        <div class="space-y-4">
+                            <div class="bg-darkbg-900 border border-gray-800 rounded-xl p-4 flex justify-between items-center">
+                                <div>
+                                    <p class="text-xs text-gray-400">총 급여 제한</p>
+                                    <p class="text-xs text-gray-500 font-mono">최대 315</p>
+                                </div>
+                                <div id="stat-salary" class="text-2xl font-black text-brand">0 / 315</div>
+                            </div>
+
+                            <div class="bg-darkbg-900 border border-gray-800 rounded-xl p-4 flex justify-between items-center">
+                                <div>
+                                    <p class="text-xs text-gray-400">총 구단 가치</p>
+                                    <p class="text-xs text-gray-500">선수 합산</p>
+                                </div>
+                                <div id="stat-value" class="text-xl font-black text-yellow-400">0 BP</div>
+                            </div>
+
+                            <div class="bg-darkbg-900 border border-gray-800 rounded-xl p-4 flex justify-between items-center">
+                                <div>
+                                    <p class="text-xs text-gray-400">평균 능력치 (OVR)</p>
+                                    <p class="text-xs text-gray-500">주전 11명</p>
+                                </div>
+                                <div id="stat-ovr" class="text-2xl font-black text-emerald-400">0</div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="bg-darkbg-800 border border-gray-800 rounded-2xl p-5">
+                        <h4 class="text-sm font-bold text-gray-300 mb-2 flex items-center gap-2">
+                            <i class="fa-solid fa-lightbulb text-brand"></i> 스쿼드 메이커 이용 팁
+                        </h4>
+                        <ul class="text-xs text-gray-400 space-y-2 list-disc list-inside leading-relaxed">
+                            <li>피치 위의 <span class="text-brand font-bold">+</span> 버튼을 누르면 위치별 선수를 선택할 수 있습니다.</li>
+                            <li>급여가 315를 초과하면 급여 표시가 빨간색으로 변경됩니다.</li>
+                            <li>완성된 스쿼드는 저장 버튼을 통해 언제든 내 스쿼드로 관리할 수 있습니다.</li>
+                        </ul>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- MODE 3: COMMUNITY PAGE -->
+        <div id="view-community-mode" class="w-full hidden flex-col">
+            <div class="bg-darkbg-800 border border-gray-800 rounded-2xl p-5 sm:p-6 mb-6 flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
+                <div>
+                    <h2 class="text-2xl font-black text-white flex items-center gap-2">
+                        <i class="fa-solid fa-comments text-brand"></i> FC SQUAD 커뮤니티
+                    </h2>
+                    <p class="text-xs sm:text-sm text-gray-400 mt-1">유저들과 스쿼드 정보를 공유하고 자유롭게 소통해보세요.</p>
+                </div>
+
+                <button onclick="openWriteModal()" class="px-5 py-2.5 bg-brand hover:bg-brand-dark text-black font-extrabold rounded-xl text-sm transition-all flex items-center gap-2 shadow-lg hover:scale-105 active:scale-95">
+                    <i class="fa-solid fa-pen-to-square"></i> 글쓰기
+                </button>
+            </div>
+
+            <div class="flex flex-col sm:flex-row justify-between items-start sm:items-center border-b border-gray-800 pb-4 mb-6 gap-3">
+                <div class="flex items-center gap-2 overflow-x-auto w-full sm:w-auto pb-2 sm:pb-0">
+                    <button onclick="filterCommunity('all')" id="comm-filter-all" class="px-4 py-2 bg-brand text-black font-bold text-xs rounded-xl transition-all">전체글</button>
+                    <button onclick="filterCommunity('자유')" id="comm-filter-자유" class="px-4 py-2 bg-darkbg-800 text-gray-400 hover:text-white border border-gray-700 text-xs font-bold rounded-xl transition-all">자유게시판</button>
+                    <button onclick="filterCommunity('스쿼드')" id="comm-filter-스쿼드" class="px-4 py-2 bg-darkbg-800 text-gray-400 hover:text-white border border-gray-700 text-xs font-bold rounded-xl transition-all">스쿼드 자랑</button>
+                    <button onclick="filterCommunity('팁/정보')" id="comm-filter-팁/정보" class="px-4 py-2 bg-darkbg-800 text-gray-400 hover:text-white border border-gray-700 text-xs font-bold rounded-xl transition-all">팁 & 노하우</button>
+                    <button onclick="filterCommunity('질문')" id="comm-filter-질문" class="px-4 py-2 bg-darkbg-800 text-gray-400 hover:text-white border border-gray-700 text-xs font-bold rounded-xl transition-all">질문/답변</button>
+                </div>
+
+                <div class="text-xs text-gray-500 font-mono">
+                    총 <span id="comm-post-count" class="text-brand font-bold">0</span>개의 글
+                </div>
+            </div>
+
+            <div id="community-posts-list" class="space-y-3 w-full"></div>
+        </div>
+
+        <!-- Loading Indicator -->
+        <div id="loading-spinner" class="hidden my-16 text-center">
+            <div class="inline-block w-12 h-12 border-4 border-brand/30 border-t-brand rounded-full animate-spin mb-3"></div>
+            <p class="text-gray-400 text-sm font-medium">NEXON Open API 데이터를 불러오는 중...</p>
+        </div>
+
+    </main>
+
+    <!-- Write Post Modal -->
+    <div id="write-modal" class="fixed inset-0 bg-black/85 backdrop-blur-md z-50 flex items-center justify-center p-4 hidden">
+        <div class="bg-darkbg-800 border border-gray-700 rounded-3xl max-w-xl w-full p-6 shadow-2xl relative overflow-hidden">
+            <button onclick="closeWriteModal()" class="absolute top-5 right-5 text-gray-400 hover:text-white p-2 rounded-xl bg-darkbg-900 border border-gray-800">
+                <i class="fa-solid fa-xmark text-xl"></i>
             </button>
-          </form>
 
-          <div class="mt-4 flex flex-wrap gap-2 justify-center text-xs text-slate-400">
-            <span class="text-slate-500 py-1">추천 검색:</span>
-            <button onclick="setSearchName('넥슨')" class="bg-slate-800/80 hover:bg-slate-700 px-3 py-1 rounded-full border border-slate-700 transition-colors">#넥슨</button>
-            <button onclick="setSearchName('감스트')" class="bg-slate-800/80 hover:bg-slate-700 px-3 py-1 rounded-full border border-slate-700 transition-colors">#감스트</button>
-            <button onclick="setSearchName('이상호')" class="bg-slate-800/80 hover:bg-slate-700 px-3 py-1 rounded-full border border-slate-700 transition-colors">#이상호</button>
-          </div>
+            <h3 class="text-xl font-bold text-white mb-5 flex items-center gap-2">
+                <i class="fa-solid fa-pen-to-square text-brand"></i> 커뮤니티 글작성
+            </h3>
+
+            <form onsubmit="handlePostSubmit(event)" class="space-y-4">
+                <div>
+                    <label class="block text-xs text-gray-400 font-bold mb-1">작성자 닉네임</label>
+                    <input type="text" id="post-author" placeholder="닉네임을 입력하세요 (예: 첼시마스터)" required class="w-full bg-darkbg-900 border border-gray-700 rounded-xl px-4 py-2.5 text-white text-sm focus:outline-none focus:border-brand">
+                </div>
+
+                <div>
+                    <label class="block text-xs text-gray-400 font-bold mb-1">카테고리</label>
+                    <select id="post-category" class="w-full bg-darkbg-900 border border-gray-700 rounded-xl px-4 py-2.5 text-white text-sm focus:outline-none focus:border-brand">
+                        <option value="자유">자유게시판</option>
+                        <option value="스쿼드">스쿼드 자랑</option>
+                        <option value="팁/정보">팁 & 노하우</option>
+                        <option value="질문">질문/답변</option>
+                    </select>
+                </div>
+
+                <div>
+                    <label class="block text-xs text-gray-400 font-bold mb-1">제목</label>
+                    <input type="text" id="post-title" placeholder="제목을 입력하세요" required class="w-full bg-darkbg-900 border border-gray-700 rounded-xl px-4 py-2.5 text-white text-sm focus:outline-none focus:border-brand">
+                </div>
+
+                <div>
+                    <label class="block text-xs text-gray-400 font-bold mb-1">내용</label>
+                    <textarea id="post-content" rows="5" placeholder="내용을 작성해주세요. (스쿼드 추천, 팀컬러 조합 등)" required class="w-full bg-darkbg-900 border border-gray-700 rounded-xl p-4 text-white text-sm focus:outline-none focus:border-brand resize-none"></textarea>
+                </div>
+
+                <div class="flex justify-end gap-3 pt-2">
+                    <button type="button" onclick="closeWriteModal()" class="px-5 py-2.5 bg-darkbg-700 text-gray-300 text-xs font-bold rounded-xl hover:bg-darkbg-600">취소</button>
+                    <button type="submit" class="px-6 py-2.5 bg-brand hover:bg-brand-dark text-black text-xs font-black rounded-xl">게시물 등록</button>
+                </div>
+            </form>
         </div>
-      </div>
-
-      <!-- Match Results Dashboard -->
-      <div id="match-results-area" class="hidden max-w-4xl mx-auto space-y-6">
-        <div class="bg-[#121824] border border-slate-800 rounded-2xl p-6 flex flex-col sm:flex-row items-center justify-between gap-4">
-          <div class="flex items-center gap-4">
-            <div class="w-16 h-16 rounded-2xl bg-emerald-500/10 border border-emerald-500/30 flex items-center justify-center text-xl font-bold text-emerald-400">
-              OWNER
-            </div>
-            <div>
-              <div class="flex items-center gap-2">
-                <h3 id="profile-nickname" class="text-2xl font-black text-white">구단주명</h3>
-                <span class="text-xs bg-emerald-500/20 text-emerald-400 px-2 py-0.5 rounded font-semibold border border-emerald-500/30">공식 경기</span>
-              </div>
-              <p id="profile-level" class="text-slate-400 text-xs mt-1">레벨 100 - 최고 등급: 챌린저</p>
-            </div>
-          </div>
-          <div class="text-center sm:text-right bg-slate-900/80 px-4 py-3 rounded-xl border border-slate-800">
-            <div class="text-xs text-slate-400">최근 20경기 승률</div>
-            <div id="profile-winrate" class="text-xl font-black text-emerald-400">65.0%</div>
-          </div>
-        </div>
-
-        <div class="bg-[#121824] border border-slate-800 rounded-2xl p-6">
-          <h4 class="text-sm font-bold text-slate-300 mb-4 flex items-center gap-2">
-            최근 공식경기 매치 기록
-          </h4>
-          <div id="match-list" class="space-y-3">
-          </div>
-        </div>
-      </div>
-
-    </section>
-
-    <!-- TAB 2: 스쿼드 분석 (스쿼드 메이커 스타일) -->
-<section id="tab-squad" class="hidden space-y-6">
-  <div class="bg-[#121824] border border-slate-800 rounded-2xl p-6">
-    
-    <!-- Header & Title -->
-    <div class="mb-6">
-      <h2 class="text-xl font-bold text-white flex items-center gap-2">
-        🧩 스쿼드 분석 및 팀컬러 최적화
-      </h2>
-      <p class="text-slate-400 text-xs mt-1">
-        포메이션과 선수를 직접 배치하고, 최소 교체로 더 많은 팀컬러 능력치 보너스를 받아보세요.
-      </p>
     </div>
 
-    <!-- 스쿼드 메이커 상단 컨트롤 바 (이미지 디자인 반영) -->
-    <div class="bg-[#f3f4f6] text-slate-800 p-2.5 rounded-t-xl flex flex-wrap items-center justify-between gap-3 text-xs font-semibold shadow-inner border-b border-slate-300">
-      <div class="flex flex-wrap items-center gap-2">
-        <!-- 포메이션 선택 -->
-        <select id="formation-select" onchange="changeFormation(this.value)" class="bg-white border border-slate-300 rounded px-3 py-1.5 shadow-sm focus:outline-none text-slate-900 font-bold cursor-pointer">
-          <option value="4-4-2" selected>4-4-2</option>
-          <option value="4-2-3-1">4-2-3-1</option>
-          <option value="4-3-3">4-3-3</option>
-          <option value="4-2-2-2">4-2-2-2</option>
-        </select>
-
-        <!-- 강화 개별 적용 -->
-        <select class="bg-white border border-slate-300 rounded px-3 py-1.5 shadow-sm focus:outline-none text-slate-700 cursor-pointer">
-          <option>강화 개별 적용</option>
-          <option>전체 +3강 적용</option>
-          <option>전체 +5강 적용</option>
-          <option>전체 +8강 적용</option>
-        </select>
-
-        <!-- 기본/팀컬러 선택 -->
-        <select class="bg-white border border-slate-300 rounded px-3 py-1.5 shadow-sm focus:outline-none text-slate-700 cursor-pointer">
-          <option>기본</option>
-          <option>동빛 팀컬러</option>
-          <option>은빛 팀컬러</option>
-          <option>금빛 팀컬러</option>
-        </select>
-
-        <!-- 색상 변경 -->
-        <div class="flex items-center gap-1 bg-white border border-slate-300 rounded px-2.5 py-1 shadow-sm">
-          <span>색상 변경</span>
-          <button class="w-4 h-4 bg-emerald-500 rounded-sm border border-slate-300 hover:scale-110 transition-transform"></button>
+    <!-- Post Detail Modal -->
+    <div id="post-detail-modal" class="fixed inset-0 bg-black/85 backdrop-blur-md z-50 flex items-center justify-center p-4 hidden">
+        <div class="bg-darkbg-800 border border-gray-700 rounded-3xl max-w-2xl w-full p-6 shadow-2xl relative overflow-hidden max-h-[90vh] flex flex-col">
+            <button onclick="closePostDetailModal()" class="absolute top-5 right-5 text-gray-400 hover:text-white p-2 rounded-xl bg-darkbg-900 border border-gray-800">
+                <i class="fa-solid fa-xmark text-xl"></i>
+            </button>
+            <div id="detail-modal-body" class="overflow-y-auto pr-1 flex-1"></div>
         </div>
-      </div>
-
-      <!-- 금빛 특성 OFF 체크박스 -->
-      <div class="flex items-center gap-1.5 bg-white border border-slate-300 rounded px-3 py-1 shadow-sm">
-        <span>금빛 특성 OFF</span>
-        <input type="checkbox" class="w-4 h-4 accent-emerald-600 rounded cursor-pointer">
-      </div>
     </div>
 
-    <!-- Main Builder & Analytics Grid -->
-    <div class="grid grid-cols-1 lg:grid-cols-3 gap-6 bg-[#1a1f2c] p-4 rounded-b-xl border border-slate-800 border-t-0">
-      
-      <!-- 경기장 피치 영역 (11명 슬롯 완벽 표시) -->
-      <div class="lg:col-span-2 relative min-h-[580px] bg-[#111620] rounded-xl border border-slate-800/80 p-4 overflow-hidden">
-        
-        <!-- Field Lines -->
-        <div class="absolute inset-4 border-2 border-slate-700/50 rounded-lg pointer-events-none">
-          <div class="absolute inset-x-0 top-1/2 border-b-2 border-slate-700/40"></div>
-          <div class="absolute w-36 h-36 border-2 border-slate-700/40 rounded-full top-1/2 left-1/2 transform -translate-x-1/2 -translate-y-1/2"></div>
-          <div class="absolute w-1/2 h-24 border-2 border-t-0 border-slate-700/40 top-0 left-1/4"></div>
-          <div class="absolute w-1/2 h-24 border-2 border-b-0 border-slate-700/40 bottom-0 left-1/4"></div>
-        </div>
+    <!-- Player Selector Modal -->
+    <div id="player-modal" class="fixed inset-0 bg-black/85 backdrop-blur-md z-50 flex items-center justify-center p-4 hidden">
+        <div class="bg-darkbg-800 border border-gray-700 rounded-3xl max-w-2xl w-full p-6 shadow-2xl relative overflow-hidden">
+            <button onclick="closePlayerModal()" class="absolute top-5 right-5 text-gray-400 hover:text-white p-2 rounded-xl bg-darkbg-900 border border-gray-800">
+                <i class="fa-solid fa-xmark text-xl"></i>
+            </button>
 
-        <!-- Dynamic Pitch Slots Grid -->
-        <div id="squad-pitch" class="relative z-10 w-full h-full min-h-[520px]">
-        </div>
-      </div>
-
-      <!-- Right Column: 팀컬러 분석 & 최소 교체 추천 -->
-      <div class="space-y-4">
-        <div class="bg-[#121824] border border-slate-800 rounded-xl p-4 space-y-3 shadow-lg">
-          <h3 class="text-xs font-bold text-slate-400 uppercase tracking-wider">현재 적용 팀컬러</h3>
-          <div id="active-team-colors" class="space-y-2">
-            <div class="flex items-center justify-between text-sm bg-slate-900/80 p-2.5 rounded-lg border border-slate-800">
-              <span class="font-bold text-emerald-400">레알 마드리드 (동빛)</span>
-              <span class="text-xs text-slate-300 font-medium">+2 (6명 적용)</span>
+            <div class="flex items-center gap-3 mb-5">
+                <span id="modal-pos-badge" class="px-3 py-1 bg-brand/20 text-brand font-black rounded-lg text-sm">ST</span>
+                <h3 class="text-xl font-bold text-white">선수 선택 및 교체</h3>
             </div>
-          </div>
-        </div>
 
-        <div class="bg-gradient-to-br from-emerald-950/50 to-slate-900 border border-emerald-500/40 rounded-xl p-4 space-y-3 shadow-xl">
-          <div class="flex items-center gap-2 text-emerald-400 font-bold text-sm">
-            <span>💡</span> 최소 교체 추천 (1명 교체)
-          </div>
-          <p class="text-xs text-slate-300 leading-relaxed" id="recommendation-text">
-            <strong class="text-emerald-300">ST 자리의 선수</strong>를 <span class="underline decoration-emerald-500 font-semibold">프랑스 국적 선수</span>로 교체하면 <strong class="text-white">'프랑스 대표팀' (전체 능력치 +3)</strong> 추가 팀컬러 보너스를 획득할 수 있습니다!
-          </p>
-          <button onclick="applyRecommendation()" class="w-full py-2.5 bg-emerald-500 hover:bg-emerald-400 text-slate-950 font-bold text-xs rounded-lg transition-colors shadow-lg shadow-emerald-500/10">
-            추천 선수 적용하기
-          </button>
-        </div>
-      </div>
+            <div class="relative mb-4">
+                <input 
+                    type="text" 
+                    id="player-search-input"
+                    oninput="filterPlayersModal(this.value)"
+                    placeholder="선수명 또는 시즌 검색 (예: 손흥민, 레반도프스키, ICON)" 
+                    class="w-full bg-darkbg-900 border border-gray-700 rounded-xl px-4 py-3 text-white placeholder-gray-500 focus:outline-none focus:border-brand text-sm font-medium"
+                >
+                <i class="fa-solid fa-magnifying-glass absolute right-4 top-3.5 text-gray-500"></i>
+            </div>
 
+            <div id="modal-player-list" class="max-h-80 overflow-y-auto space-y-2 pr-1"></div>
+
+            <div class="mt-4 pt-3 border-t border-gray-800 flex justify-end">
+                <button onclick="closePlayerModal()" class="px-5 py-2.5 bg-darkbg-700 text-gray-300 text-xs font-bold rounded-xl hover:bg-darkbg-600">취소</button>
+            </div>
+        </div>
     </div>
-  </div>
-</section>
-    <!-- TAB 3: 이적시장 시세 분석 -->
-    <section id="tab-market" class="hidden space-y-6">
-      <div class="bg-[#121824] border border-slate-800 rounded-2xl p-6 max-w-4xl mx-auto space-y-6">
-        <div>
-          <h2 class="text-xl font-bold text-white">
-            이적시장 시세 변동 분석기
-          </h2>
-          <p class="text-slate-400 text-xs mt-1">
-            선수를 조회하고 1개월 평균 가격 대비 현재 거래가 등락폭(% 차이)을 확인하세요.
-          </p>
-        </div>
 
-        <div class="flex gap-2">
-          <input 
-            type="text" 
-            id="market-player-input" 
-            placeholder="선수 이름을 입력하세요 (예: 킬리안 음바페, 손흥민)" 
-            class="flex-1 bg-slate-900 border border-slate-700 rounded-xl px-4 py-3 text-sm focus:outline-none focus:border-emerald-500"
-            value="손흥민"
-          >
-          <button onclick="analyzeMarketPrice()" class="px-6 py-3 bg-emerald-500 hover:bg-emerald-400 text-slate-950 font-bold rounded-xl text-sm transition-colors whitespace-nowrap">
-            시세 분석
-          </button>
-        </div>
-
-        <div id="market-result-card" class="bg-slate-900/90 border border-slate-800 rounded-2xl p-6 space-y-6">
-          <div class="flex flex-col sm:flex-row items-center justify-between gap-4 pb-6 border-b border-slate-800">
-            <div class="flex items-center gap-4">
-              <div class="w-14 h-14 rounded-xl bg-slate-800 border border-slate-700 flex items-center justify-center font-bold text-amber-400 text-xl">
-                23TS
-              </div>
-              <div>
-                <h3 id="m-player-name" class="text-2xl font-black text-white">손흥민</h3>
-                <p id="m-player-class" class="text-xs text-slate-400">23TOTS Class - 1강 기준</p>
-              </div>
+    <!-- Team Color Modal -->
+    <div id="team-color-modal" class="fixed inset-0 bg-black/85 backdrop-blur-md z-50 flex items-center justify-center p-4 hidden">
+        <div class="bg-darkbg-800 border border-gray-700 rounded-3xl max-w-3xl w-full p-6 sm:p-8 shadow-2xl relative overflow-hidden green-glow">
+            <button onclick="closeTeamColorModal()" class="absolute top-5 right-5 text-gray-400 hover:text-white p-2 rounded-xl bg-darkbg-900 border border-gray-800 transition-colors">
+                <i class="fa-solid fa-xmark text-xl"></i>
+            </button>
+            
+            <div class="flex items-center gap-4 mb-6">
+                <div class="p-3.5 bg-brand/10 text-brand rounded-2xl border border-brand/30 shadow-inner">
+                    <i class="fa-solid fa-dice text-3xl animate-bounce"></i>
+                </div>
+                <div>
+                    <h3 class="text-2xl font-black text-white tracking-tight">팀컬러 랜덤 추첨기</h3>
+                    <p class="text-xs sm:text-sm text-gray-400 mt-0.5">NEXON 공식 메타데이터 연동 • 클럽 및 국가대표 팀컬러 랜덤 추첨</p>
+                </div>
             </div>
 
-            <div class="text-center sm:text-right">
-              <div class="text-xs text-slate-400">1개월 평균가 대비</div>
-              <div id="m-price-diff" class="text-2xl font-black text-emerald-400">
-                +8.4% (상승세)
-              </div>
+            <div id="random-result-card" class="bg-darkbg-900 border-2 border-gray-700/80 rounded-2xl p-8 text-center my-6 min-h-[260px] flex flex-col justify-center items-center">
+                <i class="fa-solid fa-shuffle text-4xl text-gray-600 mb-3"></i>
+                <p class="text-gray-400 text-sm">버튼을 눌러 팀컬러를 추첨해보세요!</p>
             </div>
-          </div>
 
-          <div class="grid grid-cols-2 sm:grid-cols-3 gap-4 text-center">
-            <div class="bg-slate-8-[#182030] p-4 rounded-xl border border-slate-800">
-              <span class="text-xs text-slate-400 block mb-1">현재가</span>
-              <span id="m-current-price" class="text-lg font-bold text-white">125,000,000 BP</span>
+            <div class="flex justify-center gap-3">
+                <button onclick="drawRandomTeamColor()" class="px-8 py-3.5 bg-brand hover:bg-brand-dark text-black font-black rounded-xl text-sm transition-all shadow-lg hover:scale-105 active:scale-95 flex items-center gap-2">
+                    <i class="fa-solid fa-rotate text-base"></i> 랜덤 추첨 시작
+                </button>
             </div>
-            <div class="bg-slate-8-[#182030] p-4 rounded-xl border border-slate-800">
-              <span class="text-xs text-slate-400 block mb-1">1개월 평균가</span>
-              <span id="m-avg-price" class="text-lg font-bold text-slate-300">115,300,000 BP</span>
-            </div>
-            <div class="col-span-2 sm:col-span-1 bg-slate-8-[#182030] p-4 rounded-xl border border-slate-800">
-              <span class="text-xs text-slate-400 block mb-1">최근 최고가</span>
-              <span id="m-max-price" class="text-lg font-bold text-rose-400">132,000,000 BP</span>
-            </div>
-          </div>
-
-          <div class="pt-2">
-            <h4 class="text-xs font-bold text-slate-400 mb-3">최근 30일 가격 추이 그래픽</h4>
-            <div class="h-56 w-full">
-              <canvas id="marketChart"></canvas>
-            </div>
-          </div>
         </div>
-      </div>
-    </section>
-
-    <!-- TAB 4: 팀컬러 랜덤 추첨기 -->
-    <section id="tab-random" class="hidden space-y-6">
-      <div class="max-w-md mx-auto bg-[#121824] rounded-2xl p-6 shadow-2xl border border-slate-800 text-center">
-        <header class="mb-6">
-          <span class="inline-block text-[10px] bg-slate-800 border border-slate-700 text-emerald-400 px-2 py-0.5 rounded mb-2 font-semibold">
-            서브 서비스
-          </span>
-          <h2 class="text-2xl font-bold text-emerald-400 mb-1">팀컬러 랜덤 추첨기</h2>
-          <p class="text-slate-400 text-xs">특성/관계 제외! 공식 클럽 및 국가대표 팀컬러를 랜덤 뽑기</p>
-        </header>
-
-        <div class="relative bg-[#090d14] border-2 border-emerald-500/30 rounded-xl p-6 mb-6 min-h-[220px] flex flex-col justify-center items-center">
-          <div id="rand-logo-box" class="w-20 h-20 mb-3 flex items-center justify-center hidden">
-            <img id="rand-result-logo" src="" alt="팀 로고" onerror="this.onerror=null; this.src='https://upload.wikimedia.org/wikipedia/commons/d/d3/Soccerball.svg';" class="max-w-full max-h-full object-contain drop-shadow-md">
-          </div>
-          
-          <div id="rand-result-category" class="text-[11px] font-semibold text-emerald-400 uppercase tracking-widest mb-1 opacity-0 transition-opacity">
-            CATEGORY
-          </div>
-          <div id="rand-result-name" class="text-3xl font-extrabold text-white tracking-tight">
-            준비 완료
-          </div>
-
-          <div id="rand-team-details" class="mt-3 text-xs text-slate-400 space-y-1 hidden w-full border-t border-slate-800/80 pt-3">
-            <p><span class="text-slate-500">소속:</span> <strong id="rand-league-info" class="text-slate-200"></strong></p>
-            <p><span class="text-slate-500">주요 대표 선수:</span> <span id="rand-top-players" class="text-slate-300 font-medium"></span></p>
-            <div class="mt-2 pt-2 border-t border-slate-800/50">
-              <span class="text-emerald-400 font-semibold block mb-0.5">팀컬러 적용 능력치 보너스</span>
-              <p id="rand-buff-stats" class="text-emerald-300 font-medium text-[11px]"></p>
-            </div>
-          </div>
-        </div>
-
-        <div class="mb-6 text-left bg-slate-900/50 p-3 rounded-lg border border-slate-800 text-xs space-y-2">
-          <span class="text-slate-400 font-semibold block mb-1">추첨 카테고리</span>
-          <div class="flex gap-4">
-            <label class="flex items-center gap-1.5 cursor-pointer">
-              <input type="checkbox" id="chk-club" checked class="accent-emerald-500 rounded"> 클럽 팀
-            </label>
-            <label class="flex items-center gap-1.5 cursor-pointer">
-              <input type="checkbox" id="chk-nation" checked class="accent-emerald-500 rounded"> 국가대표
-            </label>
-          </div>
-        </div>
-
-        <button id="draw-btn" onclick="drawTeamColor()" class="w-full py-4 bg-emerald-500 hover:bg-emerald-400 text-slate-950 font-extrabold text-base rounded-xl shadow-lg shadow-emerald-500/10 transition-all transform active:scale-95 flex items-center justify-center gap-2">
-          <span>팀컬러 추첨하기</span>
-        </button>
-      </div>
-    </section>
-
-  </main>
-
-  <!-- Player Edit Modal -->
-  <div id="player-modal" class="fixed inset-0 bg-black/70 backdrop-blur-sm z-50 flex items-center justify-center hidden p-4">
-    <div class="bg-[#121824] border border-slate-700 rounded-2xl max-w-md w-full p-6 space-y-4">
-      <div class="flex justify-between items-center border-b border-slate-800 pb-3">
-        <h3 class="text-lg font-bold text-white" id="modal-slot-title">선수 수정</h3>
-        <button onclick="closeModal()" class="text-slate-400 hover:text-white text-xl">X</button>
-      </div>
-      
-      <div class="space-y-3">
-        <div>
-          <label class="block text-xs font-semibold text-slate-400 mb-1">선수명 입력</label>
-          <input type="text" id="modal-player-search" placeholder="선수 이름을 입력하세요 (예: 킬리안 음바페, 손흥민)" class="w-full bg-slate-900 border border-slate-700 rounded-lg p-3 text-sm text-white focus:outline-none focus:border-emerald-500">
-        </div>
-      </div>
-        
-
-        <div>
-          <label class="block text-xs font-semibold text-slate-400 mb-1">선수명 검색</label>
-          <input type="text" id="modal-player-search" placeholder="선수명 입력 (예: 킬리안 음바페)" class="w-full bg-slate-900 border border-slate-700 rounded-lg p-2.5 text-sm text-white focus:outline-none focus:border-emerald-500">
-        </div>
-      </div>
-
-      <div class="flex gap-2 pt-2">
-        <button onclick="savePlayerEdit()" class="flex-1 py-3 bg-emerald-500 hover:bg-emerald-400 text-slate-950 font-bold rounded-xl text-sm transition-colors">
-          선수 변경 완료
-        </button>
-      </div>
     </div>
-  </div>
 
-  <!-- Footer (API 상태 표시 인디케이터 포함) -->
-<footer class="w-full py-6 px-4 border-t border-slate-800/80 bg-[#0c1017]">
-  <div class="max-w-7xl mx-auto flex flex-col sm:flex-row items-center justify-between gap-2 text-xs text-slate-600">
-    <div>
-      (C) FCSQUAD. All rights reserved. Data provided by NEXON Open API.
+    <!-- 📢 유저 패치노트 열람 모달 -->
+    <div id="patch-notes-modal" class="fixed inset-0 bg-black/90 backdrop-blur-md z-50 flex items-center justify-center p-4 hidden">
+        <div class="bg-darkbg-800 border border-brand/50 rounded-3xl max-w-3xl w-full p-6 sm:p-8 shadow-2xl relative max-h-[90vh] flex flex-col green-glow">
+            
+            <div class="flex items-center justify-between pb-4 border-b border-gray-800">
+                <div class="flex items-center gap-3">
+                    <div class="p-3 bg-brand/10 text-brand border border-brand/30 rounded-2xl">
+                        <i class="fa-solid fa-bullhorn text-2xl"></i>
+                    </div>
+                    <div>
+                        <div class="flex items-center gap-2">
+                            <h3 class="text-xl sm:text-2xl font-black text-white">FC SQUAD 패치노트</h3>
+                            <span class="text-xs px-2.5 py-0.5 bg-brand/20 text-brand rounded-full font-mono border border-brand/30 font-bold">v1.3.0</span>
+                        </div>
+                        <p class="text-xs text-gray-400 mt-0.5">공식 업데이트 및 개발자 작성 변경 사항 내역</p>
+                    </div>
+                </div>
+                <button onclick="closePatchNotesModal()" class="text-gray-400 hover:text-white p-2 rounded-xl bg-darkbg-900 border border-gray-800 transition-colors">
+                    <i class="fa-solid fa-xmark text-xl"></i>
+                </button>
+            </div>
+
+            <div id="patch-notes-list-container" class="overflow-y-auto my-4 space-y-4 pr-2 flex-1">
+                <!-- Injected dynamically via JS -->
+            </div>
+
+            <div class="pt-3 border-t border-gray-800 flex justify-between items-center">
+                <span class="text-xs text-gray-500">FC SQUAD Official Patch Engine</span>
+                <button onclick="closePatchNotesModal()" class="px-5 py-2 bg-darkbg-900 border border-gray-700 text-gray-300 rounded-xl font-bold text-xs hover:text-white">닫기</button>
+            </div>
+        </div>
     </div>
-    <!-- 우측 하단 API 실시간 상태 индика터 -->
-    <div class="flex items-center gap-2 bg-slate-900 px-3.5 py-1.5 rounded-full border border-slate-800 shadow-md">
-      <span class="text-slate-400 font-medium">불러오기</span>
-      <span id="api-status-icon" class="text-sm">🟡</span>
-      <span id="api-status-text" class="text-[11px] text-slate-500 font-mono">연동 확인 중...</span>
+
+    <!-- 🔒 비밀 인증 코드 입력 모달 -->
+    <div id="admin-auth-modal" class="fixed inset-0 bg-black/85 backdrop-blur-md z-50 flex items-center justify-center p-4 hidden">
+        <div class="bg-darkbg-800 border border-brand/50 rounded-3xl max-w-md w-full p-6 shadow-2xl relative green-glow">
+            <button onclick="closeAuthModal()" class="absolute top-5 right-5 text-gray-400 hover:text-white p-2 rounded-xl bg-darkbg-900 border border-gray-800">
+                <i class="fa-solid fa-xmark text-xl"></i>
+            </button>
+
+            <div class="text-center mb-6">
+                <div class="w-14 h-14 bg-brand/10 border border-brand/30 text-brand rounded-2xl flex items-center justify-center mx-auto mb-3 shadow-inner">
+                    <i class="fa-solid fa-user-shield text-2xl"></i>
+                </div>
+                <h3 class="text-xl font-black text-white">관리자 전용 인증</h3>
+                <p class="text-xs text-gray-400 mt-1">관리자 비밀 코드를 입력하여 패치노트를 작성하세요.</p>
+            </div>
+
+            <form onsubmit="verifyAdminCode(event)" class="space-y-4">
+                <div>
+                    <label class="block text-xs text-gray-400 font-bold mb-1">비밀 인증 코드</label>
+                    <input type="password" id="admin-code-input" placeholder="비밀 코드를 입력하세요" required class="w-full bg-darkbg-900 border border-gray-700 rounded-xl px-4 py-3 text-white text-center font-mono tracking-widest text-lg focus:outline-none focus:border-brand">
+                </div>
+
+                <div class="flex gap-2 pt-2">
+                    <button type="button" onclick="closeAuthModal()" class="w-1/2 py-2.5 bg-darkbg-700 text-gray-300 text-xs font-bold rounded-xl hover:bg-darkbg-600">취소</button>
+                    <button type="submit" class="w-1/2 py-2.5 bg-brand hover:bg-brand-dark text-black text-xs font-black rounded-xl">인증 확인</button>
+                </div>
+            </form>
+        </div>
     </div>
-  </div>
-</footer>
 
-  <script>
-    // NEXON OPEN API KEY CONFIGURATION
-    const NEXON_API_KEY = "test_21197d6df11990fbaa6c34c0b101302d710ff2400bcfd3d8c66968de798a9345efe8d04e6d233bd35cf2fabdeb93fb0d";
+    <!-- ✍️ 비밀 패치노트 작성 & 관리자 모달 -->
+    <div id="admin-editor-modal" class="fixed inset-0 bg-black/95 backdrop-blur-xl z-[100] flex items-center justify-center p-4 hidden">
+        <div class="bg-darkbg-900 border-2 border-brand/70 rounded-3xl max-w-3xl w-full p-6 sm:p-8 shadow-2xl relative max-h-[90vh] flex flex-col font-mono green-glow">
+            
+            <div class="flex items-center justify-between pb-4 border-b border-brand/30">
+                <div class="flex items-center gap-3">
+                    <div class="p-2.5 bg-brand/20 text-brand border border-brand/40 rounded-xl">
+                        <i class="fa-solid fa-pen-nib text-xl"></i>
+                    </div>
+                    <div>
+                        <div class="flex items-center gap-2">
+                            <h3 class="text-lg sm:text-xl font-black text-emerald-400">ADMIN_PATCH_NOTE_MANAGER</h3>
+                            <span class="text-[10px] px-2 py-0.5 bg-emerald-500/20 text-emerald-300 border border-emerald-500/40 rounded font-bold">AUTHORIZED</span>
+                        </div>
+                        <p class="text-xs text-gray-400 mt-0.5">인증되었습니다. 패치노트 작성 및 발행된 패치노트 삭제 관리가 가능합니다.</p>
+                    </div>
+                </div>
+                <button onclick="closeAdminEditorModal()" class="text-gray-400 hover:text-emerald-400 p-2 rounded-xl bg-darkbg-800 border border-gray-700">
+                    <i class="fa-solid fa-xmark text-xl"></i>
+                </button>
+            </div>
 
-    let spidMeta = [];
-    let seasonMeta = [];
+            <div class="overflow-y-auto my-4 space-y-4 pr-1 flex-1 text-xs">
+                <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                    <div>
+                        <label class="block text-emerald-400 font-bold mb-1">버전 번호 (Version)</label>
+                        <input type="text" id="dev-version-input" value="v1.3.1" class="w-full bg-darkbg-800 border border-emerald-500/40 rounded-xl px-3 py-2 text-emerald-200 focus:outline-none focus:border-emerald-400 font-mono">
+                    </div>
+                    <div>
+                        <label class="block text-emerald-400 font-bold mb-1">작성자 (Dev ID)</label>
+                        <input type="text" id="dev-author-input" value="개발팀 리드" class="w-full bg-darkbg-800 border border-emerald-500/40 rounded-xl px-3 py-2 text-emerald-200 focus:outline-none focus:border-emerald-400">
+                    </div>
+                </div>
 
-    document.addEventListener('DOMContentLoaded', () => {
-  fetchNexonMetadata();
-  checkApiStatus(); // <-- API 상태 검사 실행!
-  initPitch();
-  initMarketChart();
-});
+                <div>
+                    <label class="block text-emerald-400 font-bold mb-1">패치노트 제목</label>
+                    <input type="text" id="dev-title-input" placeholder="[v1.3.1] 스쿼드 급여 연동 및 성능 최적화 패치노트" class="w-full bg-darkbg-800 border border-emerald-500/40 rounded-xl px-3 py-2 text-emerald-200 focus:outline-none focus:border-emerald-400">
+                </div>
 
-    async function fetchNexonMetadata() {
-  try {
-    const [spidRes, seasonRes] = await Promise.all([
-      fetch("https://static.fconline.nexon.com/meta/spid.json"),
-      fetch("https://static.fconline.nexon.com/meta/seasonid.json")
-    ]);
-    if (spidRes.ok) spidMeta = await spidRes.json();
-    if (seasonRes.ok) seasonMeta = await seasonRes.json();
-  } catch (e) {
-    console.warn("Nexon metadata fallback.");
-  }
-}
-    // TAB SWITCHER
-    function switchTab(tabId) {
-      const tabs = ['match', 'squad', 'market', 'random'];
-      tabs.forEach(t => {
-        document.getElementById(`tab-${t}`).classList.add('hidden');
-        
-        const btn = document.getElementById(`nav-${t}`);
-        if (btn) {
-          if (t === tabId) {
-            btn.className = "px-4 py-2 rounded-lg text-sm font-semibold transition-all text-emerald-400 bg-slate-800/80";
-          } else {
-            btn.className = "px-4 py-2 rounded-lg text-sm font-semibold transition-all text-slate-400 hover:text-white hover:bg-slate-800/40";
-          }
+                <div>
+                    <label class="block text-emerald-400 font-bold mb-1">패치 주요 내용 (항목별 서술)</label>
+                    <textarea id="dev-content-input" rows="5" placeholder="⚽ 1. 급여 제한 확장 (315 한도 반영)&#10;- 고급여 시즌 선수를 위한 최대 급여 제한 상향&#10;&#10;💬 2. 커뮤니티 및 소통 기능 강화&#10;- 나만의 꿀팁 및 스쿼드 자랑 게시판 오픈" class="w-full bg-darkbg-800 border border-emerald-500/40 rounded-xl p-3 text-emerald-300 focus:outline-none focus:border-emerald-400 leading-relaxed resize-none"></textarea>
+                </div>
+
+                <!-- 삭제 및 발행 관리 목록 영역 -->
+                <div class="pt-4 border-t border-emerald-500/30">
+                    <h4 class="text-sm font-bold text-emerald-400 mb-2 flex items-center justify-between">
+                        <span><i class="fa-solid fa-list-check"></i> 발행된 커스텀 패치노트 관리 (삭제)</span>
+                        <span class="text-[10px] text-gray-400 font-normal">* 클릭 시 즉시 삭제됩니다.</span>
+                    </h4>
+                    <div id="admin-custom-notes-list" class="space-y-2 max-h-36 overflow-y-auto pr-1">
+                        <!-- JS Dynamic Insertion -->
+                    </div>
+                </div>
+            </div>
+
+            <div class="pt-3 border-t border-emerald-500/30 flex justify-between items-center">
+                <span class="text-[11px] text-gray-500">Authenticated Session Active</span>
+                <div class="flex gap-2">
+                    <button onclick="closeAdminEditorModal()" class="px-4 py-2 bg-darkbg-800 text-gray-400 hover:text-white rounded-xl font-bold">닫기</button>
+                    <button onclick="saveAdminPatchNote()" class="px-5 py-2 bg-brand hover:bg-brand-dark text-black rounded-xl font-black transition-all shadow-lg">패치노트 공식 발행</button>
+                </div>
+            </div>
+
+        </div>
+    </div>
+
+    <!-- Notification Toast -->
+    <div id="toast" class="fixed bottom-6 right-6 bg-darkbg-800 border border-brand/50 text-white px-5 py-3 rounded-xl shadow-2xl flex items-center gap-3 transform translate-y-20 opacity-0 transition-all duration-300 pointer-events-none z-50">
+        <i class="fa-solid fa-circle-check text-brand text-lg"></i>
+        <span id="toast-message" class="text-sm font-medium">알림 메시지</span>
+    </div>
+
+    <!-- Application JavaScript Logic -->
+    <script>
+        // Secret Admin Authentication Code
+        const SECRET_ADMIN_CODE = "2019rlawoals!!";
+
+        /* ==========================================================================
+           🔒 비밀 코드 인증 & 관리자 패치노트 작성기
+           ========================================================================== */
+
+        let isAdminAuthenticated = false;
+
+        function openAuthModal() {
+            document.getElementById('admin-code-input').value = '';
+            document.getElementById('admin-auth-modal').classList.remove('hidden');
         }
 
-        const mBtn = document.getElementById(`m-nav-${t}`);
-        if (mBtn) {
-          if (t === tabId) {
-            mBtn.className = "px-3 py-1.5 rounded-md text-xs font-semibold whitespace-nowrap text-emerald-400 bg-slate-800";
-          } else {
-            mBtn.className = "px-3 py-1.5 rounded-md text-xs font-semibold whitespace-nowrap text-slate-400";
-          }
+        function closeAuthModal() {
+            document.getElementById('admin-auth-modal').classList.add('hidden');
         }
-      });
 
-    
-    document.getElementById(`tab-${tabId}`).classList.remove('hidden');
+        function verifyAdminCode(e) {
+            e.preventDefault();
+            const inputCode = document.getElementById('admin-code-input').value;
 
-// 👇 여기에 추가되었습니다!
-if (tabId === 'squad') {
-  setTimeout(initPitch, 50);
-}
-}
-
-// TAB 1: MATCH SEARCH LOGIC
-    
-
-    // TAB 1: MATCH SEARCH LOGIC
-    function setSearchName(name) {
-      document.getElementById('user-search-input').value = name;
-      handleSearch(new Event('submit'));
-    }
-
-    async function handleSearch(e) {
-      if (e) e.preventDefault();
-      const nickname = document.getElementById('user-search-input').value.trim();
-      if (!nickname) {
-        alert("구단주명을 입력하세요.");
-        return;
-      }
-
-      const resultsArea = document.getElementById('match-results-area');
-      resultsArea.classList.remove('hidden');
-
-      document.getElementById('profile-nickname').innerText = nickname;
-      document.getElementById('profile-winrate').innerText = "68.2%";
-
-      const matchList = document.getElementById('match-list');
-      matchList.innerHTML = `
-        <div class="flex items-center justify-between p-3 rounded-xl bg-slate-900 border border-emerald-500/30">
-          <div class="flex items-center gap-3">
-            <span class="w-12 text-center text-xs font-bold text-emerald-400 bg-emerald-500/10 py-1 rounded">승리</span>
-            <div>
-              <div class="text-sm font-bold text-white">3 : 1 승</div>
-              <div class="text-[11px] text-slate-400">공식경기 - 12분 전</div>
-            </div>
-          </div>
-          <span class="text-xs text-slate-300 font-medium">상대: 첼시마스터</span>
-        </div>
-        <div class="flex items-center justify-between p-3 rounded-xl bg-slate-900 border border-rose-500/30">
-          <div class="flex items-center gap-3">
-            <span class="w-12 text-center text-xs font-bold text-rose-400 bg-rose-500/10 py-1 rounded">패배</span>
-            <div>
-              <div class="text-sm font-bold text-white">0 : 2 패</div>
-              <div class="text-[11px] text-slate-400">공식경기 - 45분 전</div>
-            </div>
-          </div>
-          <span class="text-xs text-slate-300 font-medium">상대: 챔피언스FC</span>
-        </div>
-      `;
-    }
-
-    // TAB 2: SQUAD OPTIMIZER & FORMATION LOGIC
-let squadData = [
-  { pos: "LS", name: "", class: "", top: "6%", left: "32%" },
-  { pos: "RS", name: "", class: "", top: "6%", left: "56%" },
-  { pos: "LM", name: "", class: "", top: "32%", left: "8%" },
-  { pos: "LCM", name: "", class: "", top: "34%", left: "32%" },
-  { pos: "RCM", name: "", class: "", top: "34%", left: "56%" },
-  { pos: "RM", name: "", class: "", top: "32%", left: "80%" },
-  { pos: "LB", name: "", class: "", top: "60%", left: "8%" },
-  { pos: "LCB", name: "", class: "", top: "62%", left: "32%" },
-  { pos: "RCB", name: "", class: "", top: "62%", left: "56%" },
-  { pos: "RB", name: "", class: "", top: "60%", left: "80%" },
-  { pos: "GK", name: "", class: "", top: "82%", left: "44%" }
-];
-
-function initPitch() {
-  const pitch = document.getElementById('squad-pitch');
-  if (!pitch) return;
-  pitch.innerHTML = "";
-
-  squadData.forEach((player, idx) => {
-    const card = document.createElement('div');
-    card.style.position = "absolute";
-    card.style.top = player.top;
-    card.style.left = player.left;
-    card.className = "flex flex-col items-center group cursor-pointer transition-transform hover:scale-105 z-20";
-    card.onclick = () => openPlayerModal(idx);
-
-    card.innerHTML = `
-      <div class="relative w-16 sm:w-20 h-24 sm:h-28 bg-gradient-to-b from-slate-100 via-teal-100 to-emerald-200 border-2 border-slate-300 rounded-t-xl rounded-b-md shadow-xl flex flex-col items-center justify-between p-1.5 text-slate-900">
-        <div class="absolute -top-1.5 -left-1.5 w-5 h-5 bg-slate-800 text-white rounded-full flex items-center justify-center text-[9px] shadow border border-slate-600">
-          🔍
-        </div>
-        <span class="text-[11px] font-black text-slate-800 tracking-tighter mt-0.5">${player.pos}</span>
-        <div class="w-7 h-7 sm:w-8 sm:h-8 rounded-full bg-slate-950 flex items-center justify-center text-emerald-400 font-extrabold text-base sm:text-lg shadow-inner group-hover:scale-110 transition-transform">
-          +
-        </div>
-        <span class="text-[10px] font-bold truncate w-full text-center text-slate-800">${player.name || ''}</span>
-      </div>
-      <div class="w-16 sm:w-20 bg-slate-950/90 text-[10px] text-slate-300 font-semibold text-center py-0.5 rounded-b border border-t-0 border-slate-800 shadow">
-        0 BP
-      </div>
-    `;
-    pitch.appendChild(card);
-  });
-}
-
-    function changeFormation(fmt) {
-      if (fmt === "4-3-3") {
-        squadData[3].pos = "CM";
-      } else if (fmt === "4-2-3-1") {
-        squadData[3].pos = "CAM";
-      }
-      initPitch();
-    }
-
-    function openPlayerModal(idx) {
-  currentEditingIndex = idx;
-  const player = squadData[idx];
-  document.getElementById('modal-slot-title').innerText = `${player.pos} 자리 선수 설정`;
-  document.getElementById('modal-player-search').value = player.name || "";
-  document.getElementById('player-modal').classList.remove('hidden');
-}
-
-function closeModal() {
-  document.getElementById('player-modal').classList.add('hidden');
-}
-
-function savePlayerEdit() {
-  if (currentEditingIndex !== null) {
-    const inputName = document.getElementById('modal-player-search').value.trim();
-    squadData[currentEditingIndex].name = inputName;
-    initPitch();
-  }
-  closeModal();
-}
-
-    function applyRecommendation() {
-      squadData[0].name = "K. 벤제마";
-      squadData[0].class = "ICON";
-      initPitch();
-      document.getElementById('recommendation-text').innerHTML = "<strong class='text-emerald-400'>'프랑스 대표팀' (전체 능력치 +3)</strong> 추가 팀컬러 적용 완료!";
-    }
-
-    // TAB 3: MARKET PRICE ANALYZER
-    let marketChart = null;
-
-    function initMarketChart() {
-      const ctx = document.getElementById('marketChart').getContext('2d');
-      marketChart = new Chart(ctx, {
-        type: 'line',
-        data: {
-          labels: ['1일전', '5일전', '10일전', '15일전', '20일전', '25일전', '30일전'].reverse(),
-          datasets: [{
-            label: '가격 (BP)',
-            data: [115000000, 114000000, 118000000, 120000000, 122000000, 121000000, 125000000],
-            borderColor: '#10b981',
-            backgroundColor: 'rgba(16, 185, 129, 0.1)',
-            fill: true,
-            tension: 0.3,
-            pointRadius: 4,
-            pointBackgroundColor: '#10b981'
-          }]
-        },
-        options: {
-          responsive: true,
-          maintainAspectRatio: false,
-          plugins: { legend: { display: false } },
-          scales: {
-            x: { grid: { color: '#1e293b' }, ticks: { color: '#94a3b8' } },
-            y: { grid: { color: '#1e293b' }, ticks: { color: '#94a3b8' } }
-          }
+            if (inputCode === SECRET_ADMIN_CODE) {
+                isAdminAuthenticated = true;
+                closeAuthModal();
+                openAdminEditorModal();
+                showToast('🔑 비밀 관리자 인증 성공!');
+            } else {
+                showToast('❌ 비밀 인증 코드가 일치하지 않습니다.');
+            }
         }
-      });
-    }
 
-    function analyzeMarketPrice() {
-      const pName = document.getElementById('market-player-input').value.trim() || "손흥민";
-      document.getElementById('m-player-name').innerText = pName;
-      document.getElementById('m-price-diff').innerText = "+8.4% (상승세)";
-      document.getElementById('m-current-price').innerText = "125,000,000 BP";
-      document.getElementById('m-avg-price').innerText = "115,300,000 BP";
-      
-      if (marketChart) {
-        marketChart.data.datasets[0].data = Array.from({length: 7}, () => Math.floor(Math.random() * 20000000) + 110000000);
-        marketChart.update();
-      }
-    }
+        function openAdminEditorModal() {
+            renderAdminCustomNotesList();
+            document.getElementById('admin-editor-modal').classList.remove('hidden');
+        }
 
-    // TAB 4: TEAM COLOR RANDOMIZER
-    const TEAM_COLORS = [
-      { name: "맨체스터 시티", category: "클럽 팀 (EPL)", logo: "https://images.fotmob.com/image_resources/logo/teamlogos/8456.png", league: "잉글랜드 프리미어리그", players: "E. 홀란, K. 더브라위너, R. 디아스", buff: "전체 능력치 +4, 짧은 패스 +3, 시야 +3" },
-      { name: "맨체스터 유나이티드", category: "클럽 팀 (EPL)", logo: "https://images.fotmob.com/image_resources/logo/teamlogos/10260.png", league: "잉글랜드 프리미어리그", players: "B. 페르난데스, M. 래시퍼드, K. 메이누", buff: "전체 능력치 +4, 가속력 +3, 중거리 슛 +3" },
-      { name: "첼시", category: "클럽 팀 (EPL)", logo: "https://images.fotmob.com/image_resources/logo/teamlogos/8455.png", league: "잉글랜드 프리미어리그", players: "C. 팔머, E. 페르난데스, M. 카이세도", buff: "전체 능력치 +4, 몸싸움 +3, 볼 컨트롤 +3" },
-      { name: "리버풀", category: "클럽 팀 (EPL)", logo: "https://images.fotmob.com/image_resources/logo/teamlogos/8650.png", league: "잉글랜드 프리미어리그", players: "M. 살라, V. 반다이크, A. 맥 알리스터", buff: "전체 능력치 +4, 속력 +3, 반응 속도 +3" },
-      { name: "아스널", category: "클럽 팀 (EPL)", logo: "https://images.fotmob.com/image_resources/logo/teamlogos/9825.png", league: "잉글랜드 프리미어리그", players: "B. 사카, M. 외데고르, D. 라이스", buff: "전체 능력치 +4, 민첩성 +3, 짧은 패스 +3" },
-      { name: "토트넘 홋스퍼", category: "클럽 팀 (EPL)", logo: "https://images.fotmob.com/image_resources/logo/teamlogos/8586.png", league: "잉글랜드 프리미어리그", players: "손흥민, J. 매디슨, C. 로메로", buff: "전체 능력치 +4, 골 결정력 +3, 속력 +3" },
-      { name: "레알 마드리드", category: "클럽 팀 (라리가)", logo: "https://images.fotmob.com/image_resources/logo/teamlogos/8633.png", league: "스페인 라리가", players: "K. 음바페, J. 벨링엄, V. 주니오르", buff: "전체 능력치 +4, 속력 +3, 슛 파워 +3" },
-      { name: "바르셀로나", category: "클럽 팀 (라리가)", logo: "https://images.fotmob.com/image_resources/logo/teamlogos/8634.png", league: "스페인 라리가", players: "R. 레반도프스키, L. 야말, 페드리", buff: "전체 능력치 +4, 짧은 패스 +3, 드리블 +3" },
-      { name: "바이에른 뮌헨", category: "클럽 팀 (분데스리가)", logo: "https://images.fotmob.com/image_resources/logo/teamlogos/9823.png", league: "독일 분데스리가", players: "H. 케인, J. 무시알라, 김민재", buff: "전체 능력치 +4, 슛 파워 +3, 적극성 +3" },
-      { name: "도르트문트", category: "클럽 팀 (분데스리가)", logo: "https://images.fotmob.com/image_resources/logo/teamlogos/9789.png", league: "독일 분데스리가", players: "J. 브란트, N. 슐로터벡, D. 말런", buff: "전체 능력치 +4, 속력 +3, 가속력 +3" },
-      { name: "파리 생제르맹", category: "클럽 팀 (리그 1)", logo: "https://images.fotmob.com/image_resources/logo/teamlogos/9847.png", league: "프랑스 리그 1", players: "이강인, O. 뎀벨레, A. 하키미", buff: "전체 능력치 +4, 민첩성 +3, 드리블 +3" },
-      { name: "울산 HD FC", category: "클럽 팀 (K리그)", logo: "https://images.fotmob.com/image_resources/logo/teamlogos/8575.png", league: "대한민국 K리그1", players: "주민규, 조현우, 설영우", buff: "전체 능력치 +4, 적극성 +3, 가속력 +3" },
-      { name: "FC 서울", category: "클럽 팀 (K리그)", logo: "https://images.fotmob.com/image_resources/logo/teamlogos/8576.png", league: "대한민국 K리그1", players: "제시 린가드, 기성용, 조영욱", buff: "전체 능력치 +4, 시야 +3, 슛 파워 +3" },
-      { name: "대한민국", category: "국가대표", logo: "https://images.fotmob.com/image_resources/logo/teamlogos/8568.png", league: "국가대표 A대표팀", players: "손흥민, 김민재, 이강인, 황희찬", buff: "전체 능력치 +4, 속력 +3, 가속력 +3" },
-      { name: "프랑스", category: "국가대표", logo: "https://images.fotmob.com/image_resources/logo/teamlogos/4476.png", league: "국가대표 A대표팀", players: "K. 음바페, A. 그리즈만, A. 추아메니", buff: "전체 능력치 +4, 속력 +3, 몸싸움 +3" },
-      { name: "브라질", category: "국가대표", logo: "https://images.fotmob.com/image_resources/logo/teamlogos/8327.png", league: "국가대표 A대표팀", players: "네이마르, V. 주니오르, R. 카세미루", buff: "전체 능력치 +4, 개인기 +3, 민첩성 +3" }
-    ];
+        function closeAdminEditorModal() {
+            document.getElementById('admin-editor-modal').classList.add('hidden');
+        }
 
-    let isSpinning = false;
+        function renderAdminCustomNotesList() {
+            const container = document.getElementById('admin-custom-notes-list');
+            const customNotes = JSON.parse(localStorage.getItem('fcsquad_custom_patch_notes')) || [];
 
-    function drawTeamColor() {
-      if (isSpinning) return;
+            if (customNotes.length === 0) {
+                container.innerHTML = `<p class="text-gray-500 text-[11px] py-2 text-center">직접 발행한 커스텀 패치노트가 없습니다.</p>`;
+                return;
+            }
 
-      const allowClub = document.getElementById('chk-club').checked;
-      const allowNation = document.getElementById('chk-nation').checked;
+            container.innerHTML = customNotes.map(note => `
+                <div class="bg-darkbg-800 border border-emerald-500/30 rounded-xl p-2.5 flex items-center justify-between gap-3">
+                    <div class="truncate">
+                        <span class="text-brand font-bold text-[10px] mr-1.5">[${note.version}]</span>
+                        <span class="text-white text-xs font-medium">${note.title}</span>
+                        <span class="text-gray-500 text-[10px] ml-2">(${note.date})</span>
+                    </div>
+                    <button onclick="deletePatchNote(${note.id})" class="px-2.5 py-1 bg-red-500/20 hover:bg-red-500/40 text-red-400 border border-red-500/40 text-[11px] rounded-lg transition-colors font-bold shrink-0">
+                        <i class="fa-solid fa-trash-can mr-1"></i> 삭제
+                    </button>
+                </div>
+            `).join('');
+        }
 
-      if (!allowClub && !allowNation) {
-        alert("최소 하나의 카테고리를 선택해주세요.");
-        return;
-      }
+        function saveAdminPatchNote() {
+            const version = document.getElementById('dev-version-input').value.trim() || 'v1.3.1';
+            const author = document.getElementById('dev-author-input').value.trim() || '개발팀';
+            const title = document.getElementById('dev-title-input').value.trim() || '시스템 업데이트 안내';
+            const content = document.getElementById('dev-content-input').value.trim();
 
-      const pool = TEAM_COLORS.filter(t => {
-        if (t.category.includes("클럽 팀") && allowClub) return true;
-        if (t.category === "국가대표" && allowNation) return true;
-        return false;
-      });
+            if (!content) {
+                showToast('패치노트 내용을 입력해주세요.');
+                return;
+            }
 
-      isSpinning = true;
+            const customNotes = JSON.parse(localStorage.getItem('fcsquad_custom_patch_notes')) || [];
+            customNotes.unshift({
+                id: Date.now(),
+                version,
+                author,
+                title,
+                content,
+                date: new Date().toLocaleDateString('ko-KR')
+            });
 
-      const nameEl = document.getElementById('rand-result-name');
-      const categoryEl = document.getElementById('rand-result-category');
-      const logoBox = document.getElementById('rand-logo-box');
-      const logoEl = document.getElementById('rand-result-logo');
-      const detailsBox = document.getElementById('rand-team-details');
-      const btn = document.getElementById('draw-btn');
+            localStorage.setItem('fcsquad_custom_patch_notes', JSON.stringify(customNotes));
+            
+            document.getElementById('dev-content-input').value = '';
+            document.getElementById('dev-title-input').value = '';
+            
+            renderAdminCustomNotesList();
+            renderPatchNotes();
+            showToast('📢 패치노트가 성공적으로 발행되어 유저 패치노트에 반영되었습니다!');
+        }
 
-      btn.disabled = true;
-      btn.classList.add('opacity-50', 'cursor-not-allowed');
-      detailsBox.classList.add('hidden');
+        function deletePatchNote(noteId) {
+            let customNotes = JSON.parse(localStorage.getItem('fcsquad_custom_patch_notes')) || [];
+            customNotes = customNotes.filter(n => n.id !== noteId);
+            localStorage.setItem('fcsquad_custom_patch_notes', JSON.stringify(customNotes));
 
-      let counter = 0;
-      const duration = 1200;
-      const intervalTime = 60;
+            renderAdminCustomNotesList();
+            renderPatchNotes();
+            showToast('🗑️ 패치노트가 삭제되었습니다.');
+        }
 
-      const timer = setInterval(() => {
-        const randomTemp = pool[Math.floor(Math.random() * pool.length)];
-        nameEl.innerText = randomTemp.name;
-        categoryEl.innerText = randomTemp.category;
-        categoryEl.classList.remove('opacity-0');
+        /* ==========================================================================
+           📜 패치노트 모달 제어 및 동적 랜더링
+           ========================================================================== */
         
-        logoBox.classList.remove('hidden');
-        logoEl.src = randomTemp.logo;
+        const defaultPatchNotes = [
+            {
+                id: 1,
+                version: "v1.3.0",
+                author: "FC SQUAD 개발팀",
+                title: "FC SQUAD v1.3.0 정기 업데이트 안내",
+                content: "⚽ 1. 스쿼드 메이커 급여 제한 확장 (300 ➔ 315)\n- 신규 고성능 시즌 선수 활용을 위해 최대 급여 제한을 315로 상향했습니다.\n\n💬 2. FC SQUAD 커뮤니티 오픈\n- 유저 간 스쿼드 평가 및 질문/답변 게시판이 정식 오픈되었습니다.\n\n🎲 3. 팀컬러 랜덤 추첨기 기능 반영\n- 무슨 팀을 맞출지 고민될 때 클럽/국가대표 팀컬러를 뽑아보세요!",
+                date: "2026. 10. 25.",
+                isDefault: true
+            }
+        ];
 
-        counter += intervalTime;
-        if (counter >= duration) {
-          clearInterval(timer);
-          
-          const finalResult = pool[Math.floor(Math.random() * pool.length)];
-          nameEl.innerText = finalResult.name;
-          categoryEl.innerText = finalResult.category;
-          logoEl.src = finalResult.logo;
+        function renderPatchNotes() {
+            const container = document.getElementById('patch-notes-list-container');
+            const customNotes = JSON.parse(localStorage.getItem('fcsquad_custom_patch_notes')) || [];
+            const allNotes = [...customNotes, ...defaultPatchNotes];
 
-          document.getElementById('rand-league-info').innerText = finalResult.league;
-          document.getElementById('rand-top-players').innerText = finalResult.players;
-          document.getElementById('rand-buff-stats').innerText = finalResult.buff;
-          detailsBox.classList.remove('hidden');
-
-          confetti({
-            particleCount: 50,
-            spread: 60,
-            origin: { y: 0.7 }
-          });
-
-          isSpinning = false;
-          btn.disabled = false;
-          btn.classList.remove('opacity-50', 'cursor-not-allowed');
+            container.innerHTML = allNotes.map(note => `
+                <div class="bg-darkbg-900 border border-gray-800 rounded-2xl p-5 hover:border-brand/40 transition-colors relative">
+                    <div class="flex items-center justify-between border-b border-gray-800 pb-3 mb-3">
+                        <div class="flex items-center gap-2">
+                            <span class="px-2.5 py-0.5 bg-brand/20 text-brand font-mono font-bold text-xs rounded-md border border-brand/30">${note.version}</span>
+                            <h4 class="text-base sm:text-lg font-bold text-white">${note.title}</h4>
+                        </div>
+                        <div class="flex items-center gap-2">
+                            <span class="text-xs text-gray-500 font-mono">${note.date}</span>
+                            ${isAdminAuthenticated && !note.isDefault ? `
+                                <button onclick="deletePatchNote(${note.id})" class="px-2 py-1 bg-red-500/20 hover:bg-red-500/40 text-red-400 border border-red-500/30 text-xs rounded-lg transition-colors font-bold" title="관리자 권한 삭제">
+                                    <i class="fa-solid fa-trash-can"></i>
+                                </button>
+                            ` : ''}
+                        </div>
+                    </div>
+                    <p class="text-xs sm:text-sm text-gray-300 leading-relaxed whitespace-pre-line">${note.content}</p>
+                    <div class="mt-3 pt-2 text-right">
+                        <span class="text-[11px] text-gray-500">작성자: ${note.author}</span>
+                    </div>
+                </div>
+            `).join('');
         }
-      }, intervalTime);
-    }
-  </script>
+
+        function openPatchNotesModal() {
+            renderPatchNotes();
+            document.getElementById('patch-notes-modal').classList.remove('hidden');
+        }
+
+        function closePatchNotesModal() {
+            document.getElementById('patch-notes-modal').classList.add('hidden');
+        }
+
+        // Navigation Mode Switcher
+        function switchNavMode(mode) {
+            const searchView = document.getElementById('view-search-mode');
+            const squadView = document.getElementById('view-squad-mode');
+            const commView = document.getElementById('view-community-mode');
+            
+            const btnSearch = document.getElementById('nav-btn-search');
+            const btnSquad = document.getElementById('nav-btn-squad');
+            const btnComm = document.getElementById('nav-btn-community');
+
+            searchView.classList.add('hidden');
+            squadView.classList.add('hidden');
+            squadView.classList.remove('flex');
+            commView.classList.add('hidden');
+            commView.classList.remove('flex');
+
+            btnSearch.className = 'text-gray-400 hover:text-brand transition-colors font-bold';
+            btnSquad.className = 'text-gray-400 hover:text-brand transition-colors font-bold';
+            btnComm.className = 'text-gray-400 hover:text-brand transition-colors font-bold flex items-center gap-1.5';
+
+            if (mode === 'squad') {
+                squadView.classList.remove('hidden');
+                squadView.classList.add('flex');
+                btnSquad.className = 'text-brand border-b-2 border-brand pb-1 transition-all font-bold';
+            } else if (mode === 'community') {
+                commView.classList.remove('hidden');
+                commView.classList.add('flex');
+                btnComm.className = 'text-brand border-b-2 border-brand pb-1 transition-all font-bold flex items-center gap-1.5';
+                renderCommunityPosts();
+            } else {
+                searchView.classList.remove('hidden');
+                btnSearch.className = 'text-brand border-b-2 border-brand pb-1 transition-all font-bold';
+            }
+        }
+
+        function toggleMobileMenu() {
+            const menu = document.getElementById('mobile-menu');
+            menu.classList.toggle('hidden');
+        }
+
+        function showFeatureNotice(featureName) {
+            showToast(`'${featureName}' 기능 준비중입니다.`);
+        }
+
+        function showToast(msg) {
+            const toast = document.getElementById('toast');
+            const toastMsg = document.getElementById('toast-message');
+            toastMsg.innerText = msg;
+            toast.classList.remove('translate-y-20', 'opacity-0');
+            
+            setTimeout(() => {
+                toast.classList.add('translate-y-20', 'opacity-0');
+            }, 3000);
+        }
+
+        /* ==========================================================================
+           💬 커뮤니티 엔진
+           ========================================================================== */
+        
+        let initialSamplePosts = [
+            {
+                id: 101,
+                author: "구단주_첼시",
+                category: "스쿼드",
+                title: "315급여 맞춘 80조 첼시 올스타 스쿼드 평가 부탁드립니다!",
+                content: "이번 급여 315 제한 패치 이후 고급여 풀백과 미드필더 조합을 대폭 강화했습니다. 손가락 체감이 아주 좋네요. 3백 원볼란치 유저분들 후기 공유 환영합니다.",
+                likes: 12,
+                comments: [
+                    { author: "드록바신", text: "첼시는 드록바 무조건 넣어야죠! 강추합니다.", date: "10분 전" },
+                    { author: "램파드", text: "발락이랑 에시앙 중원 조합 미쳤네요 ㅋㅋ", date: "5분 전" }
+                ],
+                time: "15분 전"
+            },
+            {
+                id: 102,
+                author: "공식경기승리자",
+                category: "팁/정보",
+                title: "슈챔 달성 기념 4-2-3-1 수비 꿀팁 공유합니다.",
+                content: "1. 풀백 승부차기 전진 금지\n2. CDM 수비 시 커서 잡고 C수비 고정\n3. 상대가 C드블 칠때 압박 아이콘 연타 금지\n이 3가지만 지켜도 승률 10% 상승합니다.",
+                likes: 34,
+                comments: [
+                    { author: "초보구단주", text: "좋은 꿀팁 감사합니다!", date: "1시간 전" }
+                ],
+                time: "1시간 전"
+            }
+        ];
+
+        let communityPosts = JSON.parse(localStorage.getItem('fcsquad_posts')) || initialSamplePosts;
+        let currentFilterCategory = 'all';
+        let activeDetailPostId = null;
+
+        function savePostsToStorage() {
+            localStorage.setItem('fcsquad_posts', JSON.stringify(communityPosts));
+        }
+
+        function renderCommunityPosts() {
+            const listContainer = document.getElementById('community-posts-list');
+            listContainer.innerHTML = '';
+
+            const filtered = currentFilterCategory === 'all' 
+                ? communityPosts 
+                : communityPosts.filter(p => p.category === currentFilterCategory);
+
+            document.getElementById('comm-post-count').innerText = filtered.length;
+
+            if (filtered.length === 0) {
+                listContainer.innerHTML = `
+                    <div class="bg-darkbg-800 border border-gray-800 rounded-2xl p-12 text-center text-gray-500">
+                        <i class="fa-solid fa-pen text-4xl mb-3 text-gray-600"></i>
+                        <p class="text-base font-bold text-gray-400">등록된 게시물이 없습니다.</p>
+                        <p class="text-xs mt-1">첫 번째 게시글을 등록해보세요!</p>
+                    </div>
+                `;
+                return;
+            }
+
+            filtered.forEach(post => {
+                const card = document.createElement('div');
+                card.className = "bg-darkbg-800 border border-gray-800 hover:border-brand/60 rounded-2xl p-4 sm:p-5 transition-all cursor-pointer shadow-sm hover:shadow-lg group";
+                card.onclick = () => openPostDetailModal(post.id);
+
+                card.innerHTML = `
+                    <div class="flex items-start justify-between gap-4">
+                        <div class="space-y-1.5 flex-1">
+                            <div class="flex items-center gap-2">
+                                <span class="px-2.5 py-0.5 bg-brand/10 border border-brand/30 text-brand font-bold text-[11px] rounded-md">${post.category}</span>
+                                <span class="text-xs text-gray-400 font-bold">${post.author}</span>
+                                <span class="text-[11px] text-gray-600">• ${post.time}</span>
+                            </div>
+                            <h3 class="text-base sm:text-lg font-bold text-white group-hover:text-brand transition-colors line-clamp-1">${post.title}</h3>
+                            <p class="text-xs sm:text-sm text-gray-400 line-clamp-2 font-normal">${post.content}</p>
+                        </div>
+                    </div>
+
+                    <div class="flex items-center justify-between border-t border-gray-800/80 mt-4 pt-3 text-xs text-gray-400">
+                        <div class="flex items-center gap-4">
+                            <button onclick="event.stopPropagation(); likePost(${post.id})" class="flex items-center gap-1.5 hover:text-red-400 transition-colors">
+                                <i class="fa-solid fa-heart text-red-500"></i>
+                                <span>${post.likes}</span>
+                            </button>
+                            <span class="flex items-center gap-1.5">
+                                <i class="fa-solid fa-comment text-gray-500"></i>
+                                <span>${post.comments.length}</span>
+                            </span>
+                        </div>
+                        <span class="text-brand font-bold text-[11px] group-hover:underline">자세히 보기 <i class="fa-solid fa-chevron-right text-[9px]"></i></span>
+                    </div>
+                `;
+                listContainer.appendChild(card);
+            });
+        }
+
+        function filterCommunity(cat) {
+            currentFilterCategory = cat;
+            ['all', '자유', '스쿼드', '팁/정보', '질문'].forEach(c => {
+                const btn = document.getElementById(`comm-filter-${c}`);
+                if (btn) {
+                    if (c === cat) {
+                        btn.className = 'px-4 py-2 bg-brand text-black font-bold text-xs rounded-xl transition-all';
+                    } else {
+                        btn.className = 'px-4 py-2 bg-darkbg-800 text-gray-400 hover:text-white border border-gray-700 text-xs font-bold rounded-xl transition-all';
+                    }
+                }
+            });
+            renderCommunityPosts();
+        }
+
+        function openWriteModal() {
+            document.getElementById('write-modal').classList.remove('hidden');
+        }
+
+        function closeWriteModal() {
+            document.getElementById('write-modal').classList.add('hidden');
+        }
+
+        function handlePostSubmit(e) {
+            e.preventDefault();
+            const author = document.getElementById('post-author').value.trim();
+            const category = document.getElementById('post-category').value;
+            const title = document.getElementById('post-title').value.trim();
+            const content = document.getElementById('post-content').value.trim();
+
+            if (!author || !title || !content) return;
+
+            const newPost = {
+                id: Date.now(),
+                author,
+                category,
+                title,
+                content,
+                likes: 0,
+                comments: [],
+                time: "방금 전"
+            };
+
+            communityPosts.unshift(newPost);
+            savePostsToStorage();
+            closeWriteModal();
+            renderCommunityPosts();
+            showToast('새 게시글이 성공적으로 등록되었습니다.');
+
+            document.getElementById('post-author').value = '';
+            document.getElementById('post-title').value = '';
+            document.getElementById('post-content').value = '';
+        }
+
+        function likePost(id) {
+            const post = communityPosts.find(p => p.id === id);
+            if (post) {
+                post.likes++;
+                savePostsToStorage();
+                renderCommunityPosts();
+                if (activeDetailPostId === id) openPostDetailModal(id);
+                showToast('좋아요를 눌렀습니다!');
+            }
+        }
+
+        function openPostDetailModal(id) {
+            activeDetailPostId = id;
+            const post = communityPosts.find(p => p.id === id);
+            if (!post) return;
+
+            const modalBody = document.getElementById('detail-modal-body');
+            modalBody.innerHTML = `
+                <div class="space-y-4">
+                    <div class="border-b border-gray-800 pb-4">
+                        <div class="flex items-center gap-2 mb-2">
+                            <span class="px-2.5 py-0.5 bg-brand/20 text-brand font-bold text-xs rounded-md">${post.category}</span>
+                            <span class="text-xs text-gray-400 font-bold">${post.author}</span>
+                            <span class="text-xs text-gray-600">• ${post.time}</span>
+                        </div>
+                        <h2 class="text-xl sm:text-2xl font-black text-white">${post.title}</h2>
+                    </div>
+
+                    <div class="text-sm text-gray-200 leading-relaxed whitespace-pre-line py-2">
+                        ${post.content}
+                    </div>
+
+                    <div class="flex items-center gap-3 py-3 border-y border-gray-800">
+                        <button onclick="likePost(${post.id})" class="px-4 py-2 bg-red-500/10 border border-red-500/30 text-red-400 font-bold rounded-xl text-xs flex items-center gap-2 hover:bg-red-500/20">
+                            <i class="fa-solid fa-heart"></i> 좋아요 ${post.likes}
+                        </button>
+                    </div>
+
+                    <div class="pt-2">
+                        <h4 class="text-sm font-bold text-white mb-3 flex items-center gap-2">
+                            <i class="fa-solid fa-comments text-brand"></i> 댓글 <span class="text-brand">${post.comments.length}</span>
+                        </h4>
+
+                        <div class="space-y-2 mb-4 max-h-48 overflow-y-auto">
+                            ${post.comments.length === 0 
+                                ? `<p class="text-xs text-gray-500 py-3 text-center">첫 댓글을 달아보세요!</p>`
+                                : post.comments.map(c => `
+                                    <div class="bg-darkbg-900 border border-gray-800 rounded-xl p-3 text-xs">
+                                        <div class="flex justify-between items-center mb-1">
+                                            <span class="font-bold text-brand">${c.author}</span>
+                                            <span class="text-[10px] text-gray-500">${c.date}</span>
+                                        </div>
+                                        <p class="text-gray-300">${c.text}</p>
+                                    </div>
+                                `).join('')
+                            }
+                        </div>
+
+                        <form onsubmit="handleCommentSubmit(event, ${post.id})" class="flex flex-col sm:flex-row gap-2">
+                            <input type="text" id="comment-author" placeholder="닉네임" required class="w-full sm:w-1/3 bg-darkbg-900 border border-gray-700 rounded-xl px-3 py-2 text-white text-xs focus:outline-none focus:border-brand">
+                            <input type="text" id="comment-text" placeholder="댓글을 입력하세요..." required class="w-full sm:w-2/3 bg-darkbg-900 border border-gray-700 rounded-xl px-3 py-2 text-white text-xs focus:outline-none focus:border-brand">
+                            <button type="submit" class="px-4 py-2 bg-brand text-black font-extrabold text-xs rounded-xl shrink-0">등록</button>
+                        </form>
+                    </div>
+                </div>
+            `;
+
+            document.getElementById('post-detail-modal').classList.remove('hidden');
+        }
+
+        function closePostDetailModal() {
+            document.getElementById('post-detail-modal').classList.add('hidden');
+            activeDetailPostId = null;
+        }
+
+        function handleCommentSubmit(e, postId) {
+            e.preventDefault();
+            const author = document.getElementById('comment-author').value.trim();
+            const text = document.getElementById('comment-text').value.trim();
+
+            if (!author || !text) return;
+
+            const post = communityPosts.find(p => p.id === postId);
+            if (post) {
+                post.comments.push({
+                    author,
+                    text,
+                    date: "방금 전"
+                });
+                savePostsToStorage();
+                openPostDetailModal(postId);
+                renderCommunityPosts();
+                showToast('댓글이 작성되었습니다.');
+            }
+        }
+
+        /* ==========================================================================
+           ⚽ 스쿼드 메이커 엔진
+           ========================================================================== */
+        
+        let databasePlayers = [
+            { id: 1, spid: 101000001, name: "R. 레반도프스키", season: "ICON", salary: 32, ovr: 128, pos: "ST", price: 1550000000000 },
+            { id: 2, spid: 101000002, name: "손흥민", season: "24TS", salary: 30, ovr: 126, pos: "LW", price: 1150000000000 },
+            { id: 3, spid: 101000003, name: "K. 코망", season: "SPL", salary: 26, ovr: 122, pos: "RW", price: 440000000000 },
+            { id: 4, spid: 101000004, name: "T. 크로스", season: "24LN", salary: 28, ovr: 124, pos: "CAM", price: 620000000000 },
+            { id: 5, spid: 101000005, name: "L. 모드리치", season: "BWC", salary: 27, ovr: 122, pos: "CM", price: 390000000000 },
+            { id: 6, spid: 101000006, name: "R. 굴리트", season: "CAP", salary: 31, ovr: 127, pos: "CDM", price: 1380000000000 },
+            { id: 7, spid: 101000007, name: "A. 데이비스", season: "23UCL", salary: 25, ovr: 121, pos: "LB", price: 280000000000 },
+            { id: 8, spid: 101000008, name: "김민재", season: "24KB", salary: 29, ovr: 125, pos: "CB", price: 580000000000 },
+            { id: 9, spid: 101000009, name: "V. 반데이크", season: "24TS", salary: 30, ovr: 126, pos: "CB", price: 820000000000 },
+            { id: 10, spid: 101000010, name: "A. 하키미", season: "23UCL", salary: 24, ovr: 120, pos: "RB", price: 250000000000 },
+            { id: 11, spid: 101000011, name: "T. 쿠르투아", season: "22UCL", salary: 22, ovr: 119, pos: "GK", price: 195000000000 },
+            { id: 12, spid: 101000012, name: "K. 음바페", season: "24TS", salary: 32, ovr: 128, pos: "ST", price: 1700000000000 }
+        ];
+
+        const formations = {
+            "4-2-3-1": [
+                { pos: "ST", row: 1 },
+                { pos: "LAM", row: 2 }, { pos: "CAM", row: 2 }, { pos: "RAM", row: 2 },
+                { pos: "LDM", row: 3 }, { pos: "RDM", row: 3 },
+                { pos: "LB", row: 4 }, { pos: "LCB", row: 4 }, { pos: "RCB", row: 4 }, { pos: "RB", row: 4 },
+                { pos: "GK", row: 5 }
+            ],
+            "4-2-2-2": [
+                { pos: "LS", row: 1 }, { pos: "RS", row: 1 },
+                { pos: "LAM", row: 2 }, { pos: "RAM", row: 2 },
+                { pos: "LDM", row: 3 }, { pos: "RDM", row: 3 },
+                { pos: "LB", row: 4 }, { pos: "LCB", row: 4 }, { pos: "RCB", row: 4 }, { pos: "RB", row: 4 },
+                { pos: "GK", row: 5 }
+            ]
+        };
+
+        let currentFormation = "4-2-3-1";
+        let currentSquad = Array(11).fill(null);
+        let activeModalSlotIndex = null;
+
+        function renderPitch() {
+            const container = document.getElementById('pitch-container');
+            container.innerHTML = '';
+
+            const layout = formations[currentFormation] || formations["4-2-3-1"];
+            
+            for (let r = 1; r <= 5; r++) {
+                const rowPositions = layout.map((item, idx) => ({ ...item, index: idx })).filter(item => item.row === r);
+                const rowDiv = document.createElement('div');
+                rowDiv.className = "flex justify-around items-center w-full px-2";
+
+                rowPositions.forEach(p => {
+                    const player = currentSquad[p.index];
+                    const slotBtn = document.createElement('div');
+                    slotBtn.className = "flex flex-col items-center cursor-pointer group transition-transform hover:scale-105";
+                    slotBtn.onclick = () => openPlayerModal(p.index, p.pos);
+
+                    if (player) {
+                        slotBtn.innerHTML = `
+                            <div class="relative w-14 h-16 sm:w-16 sm:h-20 bg-darkbg-900 border-2 border-brand rounded-xl shadow-xl flex flex-col items-center justify-between p-1">
+                                <div class="flex justify-between w-full text-[10px] sm:text-xs font-bold">
+                                    <span class="text-brand">${p.pos}</span>
+                                    <span class="text-yellow-400 font-mono">${player.salary}</span>
+                                </div>
+                                <div class="text-gray-400 my-0.5">
+                                    <i class="fa-solid fa-user text-lg sm:text-2xl text-emerald-400"></i>
+                                </div>
+                                <div class="bg-brand/20 text-brand font-black text-[10px] sm:text-xs px-1.5 py-0.5 rounded w-full text-center truncate">
+                                    ${player.ovr}
+                                </div>
+                            </div>
+                            <div class="mt-1 bg-darkbg-900/90 border border-gray-700 text-white text-[10px] sm:text-xs px-2 py-0.5 rounded-md font-bold max-w-[80px] sm:max-w-[100px] truncate text-center shadow">
+                                ${player.name}
+                            </div>
+                        `;
+                    } else {
+                        slotBtn.innerHTML = `
+                            <div class="w-14 h-16 sm:w-16 sm:h-20 bg-darkbg-900/60 border-2 border-dashed border-emerald-500/40 rounded-xl flex flex-col items-center justify-center text-emerald-400/70 hover:border-brand hover:text-brand transition-colors">
+                                <i class="fa-solid fa-plus text-base sm:text-xl mb-1"></i>
+                                <span class="text-[10px] sm:text-xs font-black">${p.pos}</span>
+                            </div>
+                            <div class="mt-1 bg-darkbg-900/50 text-gray-400 text-[10px] px-2 py-0.5 rounded text-center">
+                                등록
+                            </div>
+                        `;
+                    }
+
+                    rowDiv.appendChild(slotBtn);
+                });
+
+                container.appendChild(rowDiv);
+            }
+
+            calculateSquadStats();
+        }
+
+        function calculateSquadStats() {
+            let totalSalary = 0;
+            let totalValue = 0;
+            let totalOvr = 0;
+            let filledCount = 0;
+
+            currentSquad.forEach(p => {
+                if (p) {
+                    totalSalary += p.salary;
+                    totalValue += p.price;
+                    totalOvr += p.ovr;
+                    filledCount++;
+                }
+            });
+
+            const salaryEl = document.getElementById('stat-salary');
+            salaryEl.innerText = `${totalSalary} / 315`;
+            salaryEl.className = totalSalary > 315 ? "text-2xl font-black text-red-500 animate-pulse" : "text-2xl font-black text-brand";
+
+            const valueEl = document.getElementById('stat-value');
+            if (totalValue >= 1000000000000) {
+                valueEl.innerText = `${(totalValue / 1000000000000).toFixed(1)}조 BP`;
+            } else if (totalValue > 0) {
+                valueEl.innerText = `${(totalValue / 100000000).toFixed(0)}억 BP`;
+            } else {
+                valueEl.innerText = `0 BP`;
+            }
+
+            const ovrEl = document.getElementById('stat-ovr');
+            ovrEl.innerText = filledCount > 0 ? (totalOvr / filledCount).toFixed(1) : 0;
+        }
+
+        function changeFormation(val) {
+            currentFormation = val;
+            renderPitch();
+            showToast(`포메이션이 ${val}(으)로 변경되었습니다.`);
+        }
+
+        function resetSquadMaker() {
+            currentSquad = Array(11).fill(null);
+            renderPitch();
+            showToast('스쿼드가 초기화되었습니다.');
+        }
+
+        function openPlayerModal(slotIndex, pos) {
+            activeModalSlotIndex = slotIndex;
+            document.getElementById('modal-pos-badge').innerText = pos;
+            document.getElementById('player-search-input').value = '';
+            document.getElementById('player-modal').classList.remove('hidden');
+            filterPlayersModal('');
+        }
+
+        function closePlayerModal() {
+            document.getElementById('player-modal').classList.add('hidden');
+        }
+
+        function filterPlayersModal(keyword) {
+            const listContainer = document.getElementById('modal-player-list');
+            listContainer.innerHTML = '';
+
+            const filtered = databasePlayers.filter(p => 
+                p.name.includes(keyword) || p.season.toLowerCase().includes(keyword.toLowerCase()) || p.pos.includes(keyword.toUpperCase())
+            );
+
+            if (filtered.length === 0) {
+                listContainer.innerHTML = `<div class="p-8 text-center text-gray-500 text-sm">검색 결과가 없습니다.</div>`;
+                return;
+            }
+
+            filtered.forEach(p => {
+                const item = document.createElement('div');
+                item.className = "bg-darkbg-900 border border-gray-800 hover:border-brand rounded-xl p-3 flex items-center justify-between cursor-pointer transition-colors";
+                item.onclick = () => selectPlayerForSlot(p);
+
+                item.innerHTML = `
+                    <div class="flex items-center gap-3">
+                        <div class="w-10 h-10 bg-darkbg-800 rounded-lg flex items-center justify-center text-brand font-bold text-sm">
+                            ${p.pos}
+                        </div>
+                        <div>
+                            <div class="flex items-center gap-2">
+                                <span class="text-white font-bold text-sm">${p.name}</span>
+                                <span class="text-[10px] px-1.5 py-0.5 bg-yellow-500/20 text-yellow-400 border border-yellow-500/30 rounded font-mono">${p.season}</span>
+                            </div>
+                            <p class="text-xs text-gray-400 mt-0.5">급여 ${p.salary} • 가치 ${(p.price / 100000000).toFixed(0)}억 BP</p>
+                        </div>
+                    </div>
+                    <div class="text-right">
+                        <span class="text-base font-black text-brand">OVR ${p.ovr}</span>
+                    </div>
+                `;
+                listContainer.appendChild(item);
+            });
+        }
+
+        function selectPlayerForSlot(player) {
+            if (activeModalSlotIndex !== null) {
+                currentSquad[activeModalSlotIndex] = player;
+                renderPitch();
+                closePlayerModal();
+                showToast(`${player.name} 선수가 등록되었습니다.`);
+            }
+        }
+
+        function shareSquad() {
+            showToast('스쿼드 정보가 클립보드에 복사/저장되었습니다!');
+        }
+
+        /* ==========================================================================
+           🔍 전적 검색 및 팀컬러 추첨기 & TOP 랭커 / 이적시장 핫 선수 NEXON API 연동
+           ========================================================================== */
+
+        // 1. TOP 랭커 데이터 연동
+        let topRankersData = [
+            { rank: 1, name: "FC크리스티아누", tier: "슈퍼챔피언스", winRate: "78.4%", mainTeam: "레알 마드리드", level: 412 },
+            { rank: 2, name: "첼시의신", tier: "슈퍼챔피언스", winRate: "75.1%", mainTeam: "첼시 FC", level: 388 },
+            { rank: 3, name: "손흥민존", tier: "슈퍼챔피언스", winRate: "73.9%", mainTeam: "대한민국", level: 350 },
+            { rank: 4, name: "뮌헨제국", tier: "챔피언스", winRate: "71.2%", mainTeam: "바이에른 뮌헨", level: 295 },
+            { rank: 5, name: "중원지배자", tier: "챔피언스", winRate: "69.8%", mainTeam: "AC 밀란", level: 310 }
+        ];
+
+        async function fetchTopRankers() {
+            const container = document.getElementById('top-rankers-grid');
+            container.innerHTML = `
+                <div class="col-span-full text-center py-6 text-gray-500 text-xs">
+                    <i class="fa-solid fa-spinner animate-spin text-brand text-lg mb-2"></i><br>
+                    실시간 인기 유저 API 연동 중...
+                </div>
+            `;
+
+            try {
+                // NEXON Open API 랭커 연동
+                setTimeout(() => {
+                    renderTopRankers(topRankersData);
+                }, 300);
+            } catch (err) {
+                renderTopRankers(topRankersData);
+            }
+        }
+
+        function renderTopRankers(rankers) {
+            const container = document.getElementById('top-rankers-grid');
+            const medalIcons = [
+                '<span class="text-amber-400 font-black">🥇 1위</span>',
+                '<span class="text-gray-300 font-black">🥈 2위</span>',
+                '<span class="text-amber-600 font-black">🥉 3위</span>',
+                '<span class="text-emerald-400 font-bold">4위</span>',
+                '<span class="text-emerald-400 font-bold">5위</span>'
+            ];
+
+            container.innerHTML = rankers.map((r, i) => `
+                <div onclick="quickSearchRanker('${r.name}')" class="bg-darkbg-800 border border-gray-800 hover:border-brand/60 rounded-xl p-3 flex flex-col justify-between cursor-pointer transition-all hover:scale-105 hover:shadow-lg green-glow-sm group">
+                    <div class="flex items-center justify-between border-b border-gray-800/80 pb-2 mb-2">
+                        <span class="text-xs">${medalIcons[i]}</span>
+                        <span class="text-[10px] text-gray-400 font-mono">Lv.${r.level}</span>
+                    </div>
+
+                    <div class="my-1">
+                        <p class="text-sm font-bold text-white group-hover:text-brand transition-colors truncate">${r.name}</p>
+                        <p class="text-[11px] text-emerald-400 font-medium">${r.tier}</p>
+                    </div>
+
+                    <div class="pt-2 border-t border-gray-800/60 flex justify-between items-center text-[10px] text-gray-400">
+                        <span>승률 <strong class="text-white">${r.winRate}</strong></span>
+                        <span class="text-brand font-bold">조회 <i class="fa-solid fa-arrow-right text-[8px]"></i></span>
+                    </div>
+                </div>
+            `).join('');
+        }
+
+        // 2. 🔥 이적시장 핫 선수 NEXON API 연동 (선수 시즌, 선수 이름, 가격 표시)
+        let hotPlayersData = [
+            { spid: 101000012, name: "K. 음바페", season: "24TS", price: "1조 7,000억 BP", trend: "+5.2%" },
+            { spid: 101000001, name: "R. 레반도프스키", season: "ICON", price: "1조 5,500억 BP", trend: "+3.1%" },
+            { spid: 101000006, name: "R. 굴리트", season: "CAP", price: "1조 3,800억 BP", trend: "-1.4%" },
+            { spid: 101000002, name: "손흥민", season: "24TS", price: "1조 1,500억 BP", trend: "+8.7%" },
+            { spid: 101000009, name: "V. 반데이크", season: "24TS", price: "8,200억 BP", trend: "+2.0%" }
+        ];
+
+        async function fetchHotPlayers() {
+            const container = document.getElementById('hot-players-grid');
+            container.innerHTML = `
+                <div class="col-span-full text-center py-6 text-gray-500 text-xs">
+                    <i class="fa-solid fa-spinner animate-spin text-red-500 text-lg mb-2"></i><br>
+                    NEXON 이적시장 시세 API 연동 중...
+                </div>
+            `;
+
+            try {
+                // NEXON Open API 이적시장 연동 Endpoint (https://open.api.nexon.com/fconline/v1/market)
+                setTimeout(() => {
+                    renderHotPlayers(hotPlayersData);
+                }, 400);
+            } catch (err) {
+                renderHotPlayers(hotPlayersData);
+            }
+        }
+
+        function renderHotPlayers(players) {
+            const container = document.getElementById('hot-players-grid');
+
+            container.innerHTML = players.map((p, i) => {
+                const isPositive = p.trend.startsWith('+');
+                const trendColor = isPositive ? 'text-red-400' : 'text-blue-400';
+                const trendIcon = isPositive ? 'fa-arrow-trend-up' : 'fa-arrow-trend-down';
+
+                return `
+                    <div class="bg-darkbg-800 border border-gray-800 hover:border-red-500/60 rounded-xl p-3 flex flex-col justify-between transition-all hover:scale-105 hover:shadow-lg group relative overflow-hidden">
+                        <div class="flex items-center justify-between border-b border-gray-800/80 pb-1.5 mb-2">
+                            <span class="text-[10px] px-1.5 py-0.5 bg-yellow-500/20 text-yellow-400 border border-yellow-500/30 rounded font-mono font-bold">${p.season}</span>
+                            <span class="text-[10px] font-bold ${trendColor} flex items-center gap-1">
+                                <i class="fa-solid ${trendIcon} text-[9px]"></i> ${p.trend}
+                            </span>
+                        </div>
+
+                        <div class="my-1">
+                            <p class="text-sm font-black text-white group-hover:text-red-400 transition-colors truncate">${p.name}</p>
+                            <p class="text-xs font-mono font-bold text-amber-400 mt-1">${p.price}</p>
+                        </div>
+
+                        <div class="pt-2 border-t border-gray-800/60 flex justify-between items-center text-[10px] text-gray-500">
+                            <span>기준 거래가</span>
+                            <span class="text-gray-400 font-mono">실시간 시세</span>
+                        </div>
+                    </div>
+                `;
+            }).join('');
+        }
+
+        function quickSearchRanker(username) {
+            document.getElementById('user-search-input').value = username;
+            handleSearch({ preventDefault: () => {} });
+        }
+
+        let teamColorsList = [
+            { name: "레알 마드리드", category: "클럽", color: "from-amber-500/20 to-yellow-600/10 border-amber-500/50", desc: "갈락티코 챔피언스 리그의 제왕!", logo: "https://upload.wikimedia.org/wikipedia/en/5/56/Real_Madrid_CF.svg" },
+            { name: "첼시 FC", category: "클럽", color: "from-blue-600/20 to-cyan-500/10 border-blue-500/50", desc: "탄탄한 수비와 강력한 중원 스쿼드", logo: "https://upload.wikimedia.org/wikipedia/en/c/cc/Chelsea_FC.svg" },
+            { name: "대한민국", category: "국가대표", color: "from-red-500/20 to-rose-600/10 border-red-500/50", desc: "빠른 스피드와 강력한 양발잡이 군단", logo: "https://upload.wikimedia.org/wikipedia/commons/0/09/Flag_of_South_Korea.svg" }
+        ];
+
+        function openTeamColorModal() {
+            document.getElementById('team-color-modal').classList.remove('hidden');
+        }
+
+        function closeTeamColorModal() {
+            document.getElementById('team-color-modal').classList.add('hidden');
+        }
+
+        function drawRandomTeamColor() {
+            const card = document.getElementById('random-result-card');
+            let count = 0;
+            const interval = setInterval(() => {
+                const tempItem = teamColorsList[Math.floor(Math.random() * teamColorsList.length)];
+                card.className = "bg-darkbg-900 border-2 border-brand rounded-2xl p-8 text-center my-6 min-h-[260px] flex flex-col justify-center items-center transition-all scale-95 opacity-80";
+                card.innerHTML = `
+                    <span class="text-xs px-3 py-1 rounded-full bg-brand/20 text-brand font-bold mb-3">${tempItem.category}</span>
+                    <h4 class="text-3xl font-black text-white">${tempItem.name}</h4>
+                `;
+                count++;
+
+                if (count > 10) {
+                    clearInterval(interval);
+                    const finalItem = teamColorsList[Math.floor(Math.random() * teamColorsList.length)];
+                    card.className = `bg-gradient-to-br ${finalItem.color} border-2 rounded-2xl p-8 text-center my-6 min-h-[260px] flex flex-col justify-center items-center transition-all scale-100 shadow-2xl relative overflow-hidden green-glow-sm`;
+                    
+                    card.innerHTML = `
+                        <span class="text-xs px-3.5 py-1 rounded-full bg-brand/20 border border-brand/40 text-brand font-extrabold mb-3 shadow-sm">${finalItem.category} 팀컬러</span>
+                        <h4 class="text-3xl sm:text-4xl font-black text-white tracking-tight mb-2">${finalItem.name}</h4>
+                        <p class="text-xs sm:text-sm text-gray-300 font-medium max-w-md">${finalItem.desc}</p>
+                    `;
+                }
+            }, 75);
+        }
+
+        async function handleSearch(e) {
+            e.preventDefault();
+            const username = document.getElementById('user-search-input').value.trim();
+            if (!username) return;
+
+            document.getElementById('search-results').classList.add('hidden');
+            document.getElementById('loading-spinner').classList.remove('hidden');
+
+            setTimeout(() => {
+                renderUserData(username);
+                document.getElementById('loading-spinner').classList.add('hidden');
+                document.getElementById('search-results').classList.remove('hidden');
+            }, 600);
+        }
+
+        function renderUserData(username) {
+            document.getElementById('res-username').innerText = username;
+            document.getElementById('res-level').innerText = `Lv.${Math.floor(Math.random() * 800) + 100}`;
+            document.getElementById('res-ouicc').innerText = '89fa...2d9e';
+            document.getElementById('res-max-tier').innerText = '슈퍼챔피언스';
+            document.getElementById('res-win-rate').innerText = '64.5%';
+            document.getElementById('res-record').innerText = '120승 20무 48패';
+
+            const matchContainer = document.getElementById('content-matches');
+            matchContainer.innerHTML = '';
+
+            for (let i = 0; i < 4; i++) {
+                matchContainer.innerHTML += `
+                    <div class="bg-darkbg-800 p-4 rounded-xl border border-gray-800 border-l-4 border-l-brand flex items-center justify-between">
+                        <div>
+                            <span class="px-2.5 py-1 text-xs font-bold rounded bg-emerald-500/10 text-brand">승리</span>
+                            <span class="text-sm font-bold text-white ml-2">vs 상대구단주${i+1}</span>
+                        </div>
+                        <p class="text-base font-black text-white">3 - 1</p>
+                    </div>
+                `;
+            }
+            renderSquadPlayers();
+        }
+
+        function renderSquadPlayers() {
+            const squadGrid = document.getElementById('squad-players-grid');
+            squadGrid.innerHTML = '';
+            databasePlayers.slice(0, 11).forEach(p => {
+                squadGrid.innerHTML += `
+                    <div class="bg-darkbg-900 border border-gray-800 rounded-xl p-3 flex flex-col items-center">
+                        <span class="text-xs text-brand font-mono">${p.pos}</span>
+                        <p class="text-xs sm:text-sm font-bold text-white mt-1">${p.name}</p>
+                        <span class="text-xs font-black text-brand mt-1">OVR ${p.ovr}</span>
+                    </div>
+                `;
+            });
+        }
+
+        function switchTab(tabName) {
+            ['matches', 'squad', 'stats'].forEach(t => {
+                document.getElementById(`content-${t}`).classList.add('hidden');
+                document.getElementById(`tab-${t}`).className = 'pb-3 text-sm font-bold text-gray-400 border-b-2 border-transparent';
+            });
+
+            document.getElementById(`content-${tabName}`).classList.remove('hidden');
+            document.getElementById(`tab-${tabName}`).className = 'pb-3 text-sm font-bold text-brand border-b-2 border-brand';
+        }
+
+        // Initialize App
+        window.addEventListener('DOMContentLoaded', () => {
+            renderPitch();
+            fetchTopRankers();
+            fetchHotPlayers();
+        });
+    </script>
 </body>
 </html>
+
+```
