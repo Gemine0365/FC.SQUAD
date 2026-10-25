@@ -1438,98 +1438,55 @@ let playerMetaMap = {};
 // 1. TOP 랭커 데이터 연동 함수
 // 1. TOP 랭커 데이터 연동 함수
 
+// 2. 실시간 TOP 랭커 조회
 async function fetchTopRankers() {
+    const container = document.getElementById('rankerList');
     try {
         const response = await fetch('/api/ranker');
         if (!response.ok) throw new Error(`HTTP ${response.status}`);
         
         const data = await response.json();
-        
-        // 넥슨 API 응답 데이터 처리 (배열이 직접 오거나 객체 내 배열로 오는 경우 모두 지원)
         const rankers = Array.isArray(data) ? data : (data.rankers || data.data || []);
         
         if (!rankers || rankers.length === 0) {
             throw new Error('랭커 데이터가 없습니다.');
         }
 
-        // 이후 데이터 렌더링 로직...
         renderRankers(rankers.slice(0, 5));
     } catch (error) {
         console.error('랭커 조회 실패:', error);
-    }
-}
-    }} catch (error) {
-        console.error("랭커 조회 실패:", error);
-
         container.innerHTML = `
-            <div class="col-span-full text-center py-6 text-amber-400 text-xs">
-                <i class="fa-solid fa-triangle-exclamation mb-2"></i>
-                <p>랭커 데이터를 불러오지 못했습니다.</p>
-                <p class="mt-2 text-gray-400">${escapeHtml(error.message)}</p>
+            <div class="col-span-full text-center py-6 bg-darkbg-800 rounded-xl border border-gray-800 text-amber-500 text-sm">
+                <i class="fa-solid fa-triangle-exclamation mb-1 text-base block"></i>
+                랭커 데이터를 불러오지 못했습니다.
             </div>
         `;
     }
 }
 
-function escapeHtml(value) {
-    return String(value).replace(/[&<>"']/g, char => ({
-        "&": "&amp;",
-        "<": "&lt;",
-        ">": "&gt;",
-        '"': "&quot;",
-        "'": "&#39;"
-    })[char]);
-}
-
-
-        // 2. 🔥 이적시장 핫 선수 NEXON API 연동 (선수 시즌, 선수 이름, 가격 표시)
-        let hotPlayersData = [
-            { spid: 101000012, name: "K. 음바페", season: "24TS", price: "1조 7,000억 BP", trend: "+5.2%" },
-            { spid: 101000001, name: "R. 레반도프스키", season: "ICON", price: "1조 5,500억 BP", trend: "+3.1%" },
-            { spid: 101000006, name: "R. 굴리트", season: "CAP", price: "1조 3,800억 BP", trend: "-1.4%" },
-            { spid: 101000002, name: "손흥민", season: "24TS", price: "1조 1,500억 BP", trend: "+8.7%" },
-            { spid: 101000009, name: "V. 반데이크", season: "24TS", price: "8,200억 BP", trend: "+2.0%" }
-        ];
-
-
-// 2. 이적시장 핫 선수 NEXON API 연동 함수
-/* ==========================================================================
-   🔥 이적시장 핫 선수 연동 (선수 수 확대 & 자동 매핑)
-   ========================================================================== */
-
+// 3. 이적시장 핫 선수 조회
 async function fetchHotPlayers() {
+    const container = document.getElementById('hotPlayersList');
     try {
-       const response = await fetch('/api/hot-players');
+        const response = await fetch('/api/hot-players');
         if (!response.ok) throw new Error(`HTTP ${response.status}`);
         
         const data = await response.json();
-        
-        // 핫 선수 응답 처리
         const players = Array.isArray(data) ? data : (data.players || data.data || []);
         
         if (!players || players.length === 0) {
             throw new Error('표시할 선수 데이터가 없습니다.');
         }
 
-        // 이후 데이터 렌더링 로직...
-        renderHotPlayers(players);
+        renderHotPlayers(players.slice(0, 5));
     } catch (error) {
         console.error('핫 선수 조회 실패:', error);
-    }
-}
-    } catch (error) {
-        console.error("핫 선수 조회 실패:", error);
-        
-        const container = document.getElementById('hot-players-grid');
-        if (container) {
-            container.innerHTML = `
-                <div class="col-span-full text-center py-6 text-amber-400 text-xs">
-                    <i class="fa-solid fa-triangle-exclamation mb-2"></i>
-                    <p>이적시장 데이터를 불러오지 못했습니다.</p>
-                    <p class="mt-2 text-gray-400">${escapeHtml(error.message)}</p>
-                </div>
-            `;
-        }
+        container.innerHTML = `
+            <div class="col-span-full text-center py-6 bg-darkbg-800 rounded-xl border border-gray-800 text-amber-500 text-sm">
+                <i class="fa-solid fa-triangle-exclamation mb-1 text-base block"></i>
+                이적시장 데이터를 불러오지 못했습니다.
+            </div>
+        `;
     }
 }
         function renderHotPlayers(players) {
