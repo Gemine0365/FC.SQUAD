@@ -15,13 +15,23 @@ export default async function handler(req, res) {
             headers: {
                 'x-nxopen-api-key': apiKey,
                 'accept': 'application/json',
-                'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64)'
+                'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36'
             }
         });
 
         const data = await response.json();
-        return res.status(response.status).json(data);
+
+        if (!response.ok) {
+            console.error('Nexon Market API Error Response:', data);
+            return res.status(response.status).json({
+                error: 'Nexon Market API Rejected Request',
+                status: response.status,
+                nexonMessage: data
+            });
+        }
+
+        return res.status(200).json(data);
     } catch (error) {
-        return res.status(500).json({ error: 'Nexon API Proxy Error', details: error.message });
+        return res.status(500).json({ error: 'Nexon API Proxy Internal Error', details: error.message });
     }
 }
