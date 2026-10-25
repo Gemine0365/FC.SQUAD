@@ -390,16 +390,11 @@
       
       <div class="space-y-3">
         <div>
-          <label class="block text-xs font-semibold text-slate-400 mb-1">시즌 클래스 선택</label>
-          <select id="modal-class-select" class="w-full bg-slate-900 border border-slate-700 rounded-lg p-2.5 text-sm text-emerald-400 font-bold focus:outline-none">
-            <option value="ICON">ICON (아이콘)</option>
-            <option value="23TS" selected>23TOTS</option>
-            <option value="23LN">23LN</option>
-            <option value="SPL">SPL</option>
-            <option value="CAP">CAP</option>
-            <option value="LIVE">라이브 (LIVE)</option>
-          </select>
+          <label class="block text-xs font-semibold text-slate-400 mb-1">선수명 입력</label>
+          <input type="text" id="modal-player-search" placeholder="선수 이름을 입력하세요 (예: 킬리안 음바페, 손흥민)" class="w-full bg-slate-900 border border-slate-700 rounded-lg p-3 text-sm text-white focus:outline-none focus:border-emerald-500">
         </div>
+      </div>
+        
 
         <div>
           <label class="block text-xs font-semibold text-slate-400 mb-1">선수명 검색</label>
@@ -595,26 +590,25 @@ function initPitch() {
     }
 
     function openPlayerModal(idx) {
-      currentEditingIndex = idx;
-      const player = squadData[idx];
-      document.getElementById('modal-slot-title').innerText = `${player.pos} 자리 선수 수정`;
-      document.getElementById('modal-class-select').value = player.class;
-      document.getElementById('modal-player-search').value = player.name;
-      document.getElementById('player-modal').classList.remove('hidden');
-    }
+  currentEditingIndex = idx;
+  const player = squadData[idx];
+  document.getElementById('modal-slot-title').innerText = `${player.pos} 자리 선수 설정`;
+  document.getElementById('modal-player-search').value = player.name || "";
+  document.getElementById('player-modal').classList.remove('hidden');
+}
 
-    function closeModal() {
-      document.getElementById('player-modal').classList.add('hidden');
-    }
+function closeModal() {
+  document.getElementById('player-modal').classList.add('hidden');
+}
 
-    function savePlayerEdit() {
-      if (currentEditingIndex !== null) {
-        squadData[currentEditingIndex].class = document.getElementById('modal-class-select').value;
-        squadData[currentEditingIndex].name = document.getElementById('modal-player-search').value.trim() || "선수";
-        initPitch();
-      }
-      closeModal();
-    }
+function savePlayerEdit() {
+  if (currentEditingIndex !== null) {
+    const inputName = document.getElementById('modal-player-search').value.trim();
+    squadData[currentEditingIndex].name = inputName;
+    initPitch();
+  }
+  closeModal();
+}
 
     function applyRecommendation() {
       squadData[0].name = "K. 벤제마";
