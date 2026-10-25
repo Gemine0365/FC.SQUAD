@@ -102,4 +102,645 @@
         <div class="w-full max-w-2xl relative">
           <form onsubmit="handleSearch(event)" class="relative flex items-center">
             <input 
-              type
+              type="text" 
+              id="user-search-input" 
+              placeholder="구단주명을 입력하세요 (예: 넥슨)" 
+              class="w-full bg-[#182030] text-white text-base pl-5 pr-28 py-4 rounded-2xl border-2 border-slate-700/80 focus:border-emerald-500 focus:outline-none shadow-2xl transition-all placeholder:text-slate-500"
+            >
+            <button 
+              type="submit" 
+              class="absolute right-2 px-5 py-2.5 bg-emerald-500 hover:bg-emerald-400 text-slate-950 font-extrabold text-sm rounded-xl transition-all active:scale-95 shadow-lg shadow-emerald-500/20"
+            >
+              검색
+            </button>
+          </form>
+
+          <!-- Quick Tags -->
+          <div class="mt-4 flex flex-wrap gap-2 justify-center text-xs text-slate-400">
+            <span class="text-slate-500 py-1">추천 검색:</span>
+            <button onclick="setSearchName('넥슨')" class="bg-slate-800/80 hover:bg-slate-700 px-3 py-1 rounded-full border border-slate-700 transition-colors">#넥슨</button>
+            <button onclick="setSearchName('감스트')" class="bg-slate-800/80 hover:bg-slate-700 px-3 py-1 rounded-full border border-slate-700 transition-colors">#감스트</button>
+            <button onclick="setSearchName('이상호')" class="bg-slate-800/80 hover:bg-slate-700 px-3 py-1 rounded-full border border-slate-700 transition-colors">#이상호</button>
+          </div>
+        </div>
+      </div>
+
+      <!-- Match Results Dashboard -->
+      <div id="match-results-area" class="hidden max-w-4xl mx-auto space-y-6">
+        <!-- User Profile Card -->
+        <div class="bg-[#121824] border border-slate-800 rounded-2xl p-6 flex flex-col sm:flex-row items-center justify-between gap-4">
+          <div class="flex items-center gap-4">
+            <div class="w-16 h-16 rounded-2xl bg-emerald-500/10 border border-emerald-500/30 flex items-center justify-center text-2xl font-bold text-emerald-400">
+              👑
+            </div>
+            <div>
+              <div class="flex items-center gap-2">
+                <h3 id="profile-nickname" class="text-2xl font-black text-white">구단주명</h3>
+                <span class="text-xs bg-emerald-500/20 text-emerald-400 px-2 py-0.5 rounded font-semibold border border-emerald-500/30">공식 경기</span>
+              </div>
+              <p id="profile-level" class="text-slate-400 text-xs mt-1">레벨 100 • 최고 등급: 챌린저</p>
+            </div>
+          </div>
+          <div class="text-center sm:text-right bg-slate-900/80 px-4 py-3 rounded-xl border border-slate-800">
+            <div class="text-xs text-slate-400">최근 20경기 승률</div>
+            <div id="profile-winrate" class="text-xl font-black text-emerald-400">65.0%</div>
+          </div>
+        </div>
+
+        <!-- Recent Matches List -->
+        <div class="bg-[#121824] border border-slate-800 rounded-2xl p-6">
+          <h4 class="text-sm font-bold text-slate-300 mb-4 flex items-center gap-2">
+            <span>⚽</span> 최근 공식경기 매치 기록
+          </h4>
+          <div id="match-list" class="space-y-3">
+            <!-- Dynamic Content -->
+          </div>
+        </div>
+      </div>
+
+    </section>
+
+    <!-- TAB 2: 스쿼드 분석 (Optimizer with Nexon API Metadata) -->
+    <section id="tab-squad" class="hidden space-y-6">
+      <div class="bg-[#121824] border border-slate-800 rounded-2xl p-6">
+        <div class="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 mb-6">
+          <div>
+            <h2 class="text-xl font-bold text-white flex items-center gap-2">
+              <span>🧩</span> 최소 교체 팀컬러 최적화 도우미
+            </h2>
+            <p class="text-slate-400 text-xs mt-1">
+              포메이션 및 선수를 직접 설정하여 최소 교체(1~2명)로 추가 팀컬러 보너스를 받는 조합을 찾아보세요.
+            </p>
+          </div>
+
+          <!-- Formation Selector -->
+          <div class="flex items-center gap-2">
+            <span class="text-xs text-slate-400">포메이션:</span>
+            <select id="formation-select" onchange="changeFormation(this.value)" class="bg-slate-900 border border-slate-700 text-emerald-400 font-bold text-sm px-3 py-1.5 rounded-lg focus:outline-none">
+              <option value="4-3-3">4-3-3</option>
+              <option value="4-2-3-1" selected>4-2-3-1</option>
+              <option value="4-2-2-2">4-2-2-2</option>
+              <option value="3-5-2">3-5-2</option>
+            </select>
+          </div>
+        </div>
+
+        <!-- Squad Grid & Optimizer Panel -->
+        <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
+          
+          <!-- Pitch / Squad Layout (Left 2 Columns) -->
+          <div class="lg:col-span-2 bg-[#090d14] border border-slate-800/80 rounded-2xl p-4 min-h-[500px] flex flex-col justify-between relative overflow-hidden">
+            <!-- Tactical Pitch Grid -->
+            <div id="squad-pitch" class="grid grid-cols-4 sm:grid-cols-5 gap-3 relative z-10 py-2">
+              <!-- Player Slots rendered via JS -->
+            </div>
+          </div>
+
+          <!-- Analysis & Recommendation (Right 1 Column) -->
+          <div class="space-y-4">
+            <!-- Active Team Colors -->
+            <div class="bg-slate-900/90 border border-slate-800 rounded-xl p-4 space-y-3">
+              <h3 class="text-xs font-bold text-slate-400 uppercase tracking-wider">현재 적용 팀컬러</h3>
+              <div id="active-team-colors" class="space-y-2">
+                <div class="flex items-center justify-between text-sm bg-slate-800/60 p-2 rounded border border-slate-700/50">
+                  <span class="font-bold text-emerald-400">레알 마드리드 (동빛)</span>
+                  <span class="text-xs text-slate-300">+2 (6명 적용)</span>
+                </div>
+              </div>
+            </div>
+
+            <!-- Optimization Recommendation Card -->
+            <div class="bg-gradient-to-br from-emerald-950/40 to-slate-900 border border-emerald-500/30 rounded-xl p-4 space-y-3">
+              <div class="flex items-center gap-2 text-emerald-400 font-bold text-sm">
+                <span>💡</span> 최소 교체 추천 (1명 교체)
+              </div>
+              <p class="text-xs text-slate-300 leading-relaxed" id="recommendation-text">
+                <strong class="text-emerald-300">ST 자리의 선수</strong>를 <span class="underline decoration-emerald-500 font-semibold">프랑스 국적 선수</span>로 교체 시, <strong class="text-white">'프랑스 대표팀' (전체 능력치 +3)</strong> 추가 팀컬러 보너스를 획득할 수 있습니다!
+              </p>
+              <button onclick="applyRecommendation()" class="w-full py-2 bg-emerald-500 hover:bg-emerald-400 text-slate-950 font-bold text-xs rounded-lg transition-colors">
+                추천 선수 적용하기
+              </button>
+            </div>
+          </div>
+
+        </div>
+      </div>
+    </section>
+
+    <!-- TAB 3: 이적시장 시세 분석 (Market Price Analyzer) -->
+    <section id="tab-market" class="hidden space-y-6">
+      <div class="bg-[#121824] border border-slate-800 rounded-2xl p-6 max-w-4xl mx-auto space-y-6">
+        <div>
+          <h2 class="text-xl font-bold text-white flex items-center gap-2">
+            <span>📈</span> 이적시장 시세 변동 분석기
+          </h2>
+          <p class="text-slate-400 text-xs mt-1">
+            선수를 조회하고 1개월 평균 가격 대비 현재 거래가 등락폭(% 차이)을 확인하세요.
+          </p>
+        </div>
+
+        <!-- Market Search Form -->
+        <div class="flex gap-2">
+          <input 
+            type="text" 
+            id="market-player-input" 
+            placeholder="선수 이름을 입력하세요 (예: 킬리안 음바페, 손흥민)" 
+            class="flex-1 bg-slate-900 border border-slate-700 rounded-xl px-4 py-3 text-sm focus:outline-none focus:border-emerald-500"
+            value="손흥민"
+          >
+          <button onclick="analyzeMarketPrice()" class="px-6 py-3 bg-emerald-500 hover:bg-emerald-400 text-slate-950 font-bold rounded-xl text-sm transition-colors whitespace-nowrap">
+            시세 분석
+          </button>
+        </div>
+
+        <!-- Market Analysis Result Card -->
+        <div id="market-result-card" class="bg-slate-900/90 border border-slate-800 rounded-2xl p-6 space-y-6">
+          
+          <div class="flex flex-col sm:flex-row items-center justify-between gap-4 pb-6 border-b border-slate-800">
+            <div class="flex items-center gap-4">
+              <div class="w-14 h-14 rounded-xl bg-slate-800 border border-slate-700 flex items-center justify-center font-bold text-amber-400 text-xl">
+                23TS
+              </div>
+              <div>
+                <h3 id="m-player-name" class="text-2xl font-black text-white">손흥민</h3>
+                <p id="m-player-class" class="text-xs text-slate-400">23TOTS Class • 1강 기준</p>
+              </div>
+            </div>
+
+            <div class="text-center sm:text-right">
+              <div class="text-xs text-slate-400">1개월 평균가 대비</div>
+              <div id="m-price-diff" class="text-2xl font-black text-emerald-400">
+                ▲ +8.4% (상승세)
+              </div>
+            </div>
+          </div>
+
+          <!-- Price Stats Grid -->
+          <div class="grid grid-cols-2 sm:grid-cols-3 gap-4 text-center">
+            <div class="bg-slate-8-[#182030] p-4 rounded-xl border border-slate-800">
+              <span class="text-xs text-slate-400 block mb-1">현재가</span>
+              <span id="m-current-price" class="text-lg font-bold text-white">125,000,000 BP</span>
+            </div>
+            <div class="bg-slate-8-[#182030] p-4 rounded-xl border border-slate-800">
+              <span class="text-xs text-slate-400 block mb-1">1개월 평균가</span>
+              <span id="m-avg-price" class="text-lg font-bold text-slate-300">115,300,000 BP</span>
+            </div>
+            <div class="col-span-2 sm:col-span-1 bg-slate-8-[#182030] p-4 rounded-xl border border-slate-800">
+              <span class="text-xs text-slate-400 block mb-1">최근 최고가</span>
+              <span id="m-max-price" class="text-lg font-bold text-rose-400">132,000,000 BP</span>
+            </div>
+          </div>
+
+          <!-- Price Chart Canvas -->
+          <div class="pt-2">
+            <h4 class="text-xs font-bold text-slate-400 mb-3">최근 30일 가격 추이 그래픽</h4>
+            <div class="h-56 w-full">
+              <canvas id="marketChart"></canvas>
+            </div>
+          </div>
+
+        </div>
+      </div>
+    </section>
+
+    <!-- TAB 4: 팀컬러 랜덤 추첨기 (Sub Service) -->
+    <section id="tab-random" class="hidden space-y-6">
+      <div class="max-w-md mx-auto bg-[#121824] rounded-2xl p-6 shadow-2xl border border-slate-800 text-center">
+        
+        <!-- Header -->
+        <header class="mb-6">
+          <span class="inline-block text-[10px] bg-slate-800 border border-slate-700 text-emerald-400 px-2 py-0.5 rounded mb-2 font-semibold">
+            서브 서비스
+          </span>
+          <h2 class="text-2xl font-bold text-emerald-400 mb-1">🎲 팀컬러 랜덤 추첨기</h2>
+          <p class="text-slate-400 text-xs">특성/관계 제외! 공식 클럽 및 국가대표 팀컬러를 랜덤 뽑기</p>
+        </header>
+
+        <!-- Display Card -->
+        <div class="relative bg-[#090d14] border-2 border-emerald-500/30 rounded-xl p-6 mb-6 min-h-[220px] flex flex-col justify-center items-center">
+          
+          <!-- Team Logo Box -->
+          <div id="rand-logo-box" class="w-20 h-20 mb-3 flex items-center justify-center hidden">
+            <img id="rand-result-logo" src="" alt="팀 로고" class="max-w-full max-h-full object-contain drop-shadow-md">
+          </div>
+          
+          <div id="rand-result-category" class="text-[11px] font-semibold text-emerald-400 uppercase tracking-widest mb-1 opacity-0 transition-opacity">
+            CATEGORY
+          </div>
+          <div id="rand-result-name" class="text-3xl font-extrabold text-white tracking-tight">
+            준비 완료
+          </div>
+
+          <!-- Team Details Box (League, Players, Buff Stats) -->
+          <div id="rand-team-details" class="mt-3 text-xs text-slate-400 space-y-1 hidden w-full border-t border-slate-800/80 pt-3">
+            <p><span class="text-slate-500">소속:</span> <strong id="rand-league-info" class="text-slate-200"></strong></p>
+            <p><span class="text-slate-500">주요 대표 선수:</span> <span id="rand-top-players" class="text-slate-300 font-medium"></span></p>
+            <div class="mt-2 pt-2 border-t border-slate-800/50">
+              <span class="text-emerald-400 font-semibold block mb-0.5">✨ 팀컬러 적용 능력치 보너스</span>
+              <p id="rand-buff-stats" class="text-emerald-300 font-medium text-[11px]"></p>
+            </div>
+          </div>
+        </div>
+
+        <!-- Filter Options -->
+        <div class="mb-6 text-left bg-slate-900/50 p-3 rounded-lg border border-slate-800 text-xs space-y-2">
+          <span class="text-slate-400 font-semibold block mb-1">🎯 추첨 카테고리</span>
+          <div class="flex gap-4">
+            <label class="flex items-center gap-1.5 cursor-pointer">
+              <input type="checkbox" id="chk-club" checked class="accent-emerald-500 rounded"> 클럽 팀
+            </label>
+            <label class="flex items-center gap-1.5 cursor-pointer">
+              <input type="checkbox" id="chk-nation" checked class="accent-emerald-500 rounded"> 국가대표
+            </label>
+          </div>
+        </div>
+
+        <!-- Draw Button -->
+        <button id="draw-btn" onclick="drawTeamColor()" class="w-full py-4 bg-emerald-500 hover:bg-emerald-400 text-slate-950 font-extrabold text-base rounded-xl shadow-lg shadow-emerald-500/10 transition-all transform active:scale-95 flex items-center justify-center gap-2">
+          <span>🎲 팀컬러 추첨하기</span>
+        </button>
+      </div>
+    </section>
+
+  </main>
+
+  <!-- Player Edit Modal (Squad Analysis) -->
+  <div id="player-modal" class="fixed inset-0 bg-black/70 backdrop-blur-sm z-50 flex items-center justify-center hidden p-4">
+    <div class="bg-[#121824] border border-slate-700 rounded-2xl max-w-md w-full p-6 space-y-4">
+      <div class="flex justify-between items-center border-b border-slate-800 pb-3">
+        <h3 class="text-lg font-bold text-white" id="modal-slot-title">선수 수정</h3>
+        <button onclick="closeModal()" class="text-slate-400 hover:text-white text-xl">✕</button>
+      </div>
+      
+      <div class="space-y-3">
+        <div>
+          <label class="block text-xs font-semibold text-slate-400 mb-1">시즌 클래스 선택</label>
+          <select id="modal-class-select" class="w-full bg-slate-900 border border-slate-700 rounded-lg p-2.5 text-sm text-emerald-400 font-bold focus:outline-none">
+            <option value="ICON">ICON (아이콘)</option>
+            <option value="23TS" selected>23TOTS</option>
+            <option value="23LN">23LN</option>
+            <option value="SPL">SPL</option>
+            <option value="CAP">CAP</option>
+            <option value="LIVE">라이브 (LIVE)</option>
+          </select>
+        </div>
+
+        <div>
+          <label class="block text-xs font-semibold text-slate-400 mb-1">선수명 검색</label>
+          <input type="text" id="modal-player-search" placeholder="선수명 입력 (예: 킬리안 음바페)" class="w-full bg-slate-900 border border-slate-700 rounded-lg p-2.5 text-sm text-white focus:outline-none focus:border-emerald-500">
+        </div>
+      </div>
+
+      <div class="flex gap-2 pt-2">
+        <button onclick="savePlayerEdit()" class="flex-1 py-3 bg-emerald-500 hover:bg-emerald-400 text-slate-950 font-bold rounded-xl text-sm transition-colors">
+          선수 변경 완료
+        </button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Footer -->
+  <footer class="w-full py-6 text-center text-xs text-slate-600 border-t border-slate-800/80 bg-[#0c1017]">
+    © FCSQUAD. All rights reserved. Data provided by NEXON Open API.
+  </footer>
+
+  <!-- Main JavaScript Logic -->
+  <script>
+    // ------------------------------------------------------------------------
+    // NEXON OPEN API CONFIGURATION
+    // ------------------------------------------------------------------------
+    const NEXON_API_KEY = "test_e0123456789abcdef0123456789abcdef"; // Internal Server / Embedded Key
+
+    // 넥슨 Open API 메타데이터 글로벌 캐시
+    let spidMeta = [];
+    let seasonMeta = [];
+
+    // 페이지 로드 시 넥슨 메타데이터 동기화
+    document.addEventListener('DOMContentLoaded', () => {
+      fetchNexonMetadata();
+      initPitch();
+      initMarketChart();
+    });
+
+    async function fetchNexonMetadata() {
+      try {
+        const [spidRes, seasonRes] = await Promise.all([
+          fetch("https://static.fconline.nexon.com/meta/spid.json"),
+          fetch("https://static.fconline.nexon.com/meta/seasonid.json")
+        ]);
+        if (spidRes.ok) spidMeta = await spidRes.json();
+        if (seasonRes.ok) seasonMeta = await seasonRes.json();
+      } catch (e) {
+        console.warn("Nexon metadata auto-load fallbacked to local presets.");
+      }
+    }
+
+    // ------------------------------------------------------------------------
+    // NAVIGATION TAB SWITCHER
+    // ------------------------------------------------------------------------
+    function switchTab(tabId) {
+      const tabs = ['match', 'squad', 'market', 'random'];
+      tabs.forEach(t => {
+        document.getElementById(`tab-${t}`).classList.add('hidden');
+        
+        // Desktop Button Styling
+        const btn = document.getElementById(`nav-${t}`);
+        if (btn) {
+          if (t === tabId) {
+            btn.className = "px-4 py-2 rounded-lg text-sm font-semibold transition-all text-emerald-400 bg-slate-800/80";
+          } else {
+            btn.className = "px-4 py-2 rounded-lg text-sm font-semibold transition-all text-slate-400 hover:text-white hover:bg-slate-800/40";
+          }
+        }
+
+        // Mobile Button Styling
+        const mBtn = document.getElementById(`m-nav-${t}`);
+        if (mBtn) {
+          if (t === tabId) {
+            mBtn.className = "px-3 py-1.5 rounded-md text-xs font-semibold whitespace-nowrap text-emerald-400 bg-slate-800";
+          } else {
+            mBtn.className = "px-3 py-1.5 rounded-md text-xs font-semibold whitespace-nowrap text-slate-400";
+          }
+        }
+      });
+
+      document.getElementById(`tab-${tabId}`).classList.remove('hidden');
+    }
+
+    // ------------------------------------------------------------------------
+    // TAB 1: MATCH SEARCH LOGIC
+    // ------------------------------------------------------------------------
+    function setSearchName(name) {
+      document.getElementById('user-search-input').value = name;
+      handleSearch(new Event('submit'));
+    }
+
+    async function handleSearch(e) {
+      if (e) e.preventDefault();
+      const nickname = document.getElementById('user-search-input').value.trim();
+      if (!nickname) {
+        alert("구단주명을 입력하세요.");
+        return;
+      }
+
+      const resultsArea = document.getElementById('match-results-area');
+      resultsArea.classList.remove('hidden');
+
+      document.getElementById('profile-nickname').innerText = nickname;
+      document.getElementById('profile-winrate').innerText = "68.2%";
+
+      // Sample Match Records Generation
+      const matchList = document.getElementById('match-list');
+      matchList.innerHTML = `
+        <div class="flex items-center justify-between p-3 rounded-xl bg-slate-900 border border-emerald-500/30">
+          <div class="flex items-center gap-3">
+            <span class="w-12 text-center text-xs font-bold text-emerald-400 bg-emerald-500/10 py-1 rounded">승리</span>
+            <div>
+              <div class="text-sm font-bold text-white">3 : 1 승</div>
+              <div class="text-[11px] text-slate-400">공식경기 • 12분 전</div>
+            </div>
+          </div>
+          <span class="text-xs text-slate-300 font-medium">상대: 첼시마스터</span>
+        </div>
+        <div class="flex items-center justify-between p-3 rounded-xl bg-slate-900 border border-rose-500/30">
+          <div class="flex items-center gap-3">
+            <span class="w-12 text-center text-xs font-bold text-rose-400 bg-rose-500/10 py-1 rounded">패배</span>
+            <div>
+              <div class="text-sm font-bold text-white">0 : 2 패</div>
+              <div class="text-[11px] text-slate-400">공식경기 • 45분 전</div>
+            </div>
+          </div>
+          <span class="text-xs text-slate-300 font-medium">상대: 챔피언스FC</span>
+        </div>
+      `;
+    }
+
+    // ------------------------------------------------------------------------
+    // TAB 2: SQUAD OPTIMIZER & FORMATION LOGIC
+    // ------------------------------------------------------------------------
+    let squadData = [
+      { pos: "ST", name: "K. 음바페", class: "23TS" },
+      { pos: "LW", name: "V. 주니오르", class: "23LN" },
+      { pos: "RW", name: "R. 로드리고", class: "SPL" },
+      { pos: "CAM", name: "J. 벨링엄", class: "ICON" },
+      { pos: "LDM", name: "L. 모드리치", class: "CAP" },
+      { pos: "RDM", name: "T. 크로스", class: "23TS" },
+      { pos: "LB", name: "F. 멘디", class: "LIVE" },
+      { pos: "LCB", name: "E. 밀리탕", class: "23TS" },
+      { pos: "RCB", name: "D. 알라바", class: "CAP" },
+      { pos: "RB", name: "D. 카르바할", class: "LIVE" },
+      { pos: "GK", name: "T. 쿠르투아", class: "LIVE" }
+    ];
+
+    let currentEditingIndex = null;
+
+    function initPitch() {
+      const pitch = document.getElementById('squad-pitch');
+      pitch.innerHTML = "";
+      squadData.forEach((player, idx) => {
+        const slot = document.createElement('div');
+        slot.className = "bg-slate-900/90 hover:bg-slate-800 border border-slate-700/70 hover:border-emerald-500/50 rounded-xl p-3 flex flex-col items-center justify-center cursor-pointer transition-all";
+        slot.onclick = () => openPlayerModal(idx);
+        slot.innerHTML = `
+          <span class="text-[10px] font-extrabold text-emerald-400 bg-emerald-500/10 px-2 py-0.5 rounded border border-emerald-500/20 mb-1">${player.pos}</span>
+          <span class="text-[10px] text-amber-400 font-bold mb-0.5">${player.class}</span>
+          <span class="text-xs font-bold text-white text-center truncate w-full">${player.name}</span>
+        `;
+        pitch.appendChild(slot);
+      });
+    }
+
+    function changeFormation(fmt) {
+      if (fmt === "4-3-3") {
+        squadData[3].pos = "CM";
+      } else if (fmt === "4-2-3-1") {
+        squadData[3].pos = "CAM";
+      }
+      initPitch();
+    }
+
+    function openPlayerModal(idx) {
+      currentEditingIndex = idx;
+      const player = squadData[idx];
+      document.getElementById('modal-slot-title').innerText = `${player.pos} 자리 선수 수정`;
+      document.getElementById('modal-class-select').value = player.class;
+      document.getElementById('modal-player-search').value = player.name;
+      document.getElementById('player-modal').classList.remove('hidden');
+    }
+
+    function closeModal() {
+      document.getElementById('player-modal').classList.add('hidden');
+    }
+
+    function savePlayerEdit() {
+      if (currentEditingIndex !== null) {
+        squadData[currentEditingIndex].class = document.getElementById('modal-class-select').value;
+        squadData[currentEditingIndex].name = document.getElementById('modal-player-search').value.trim() || "선수";
+        initPitch();
+      }
+      closeModal();
+    }
+
+    function applyRecommendation() {
+      squadData[0].name = "K. 벤제마";
+      squadData[0].class = "ICON";
+      initPitch();
+      document.getElementById('recommendation-text').innerHTML = "<strong class='text-emerald-400'>'프랑스 대표팀' (전체 능력치 +3)</strong> 추가 팀컬러 적용 완료!";
+    }
+
+    // ------------------------------------------------------------------------
+    // TAB 3: MARKET PRICE ANALYZER (CHART.JS)
+    // ------------------------------------------------------------------------
+    let marketChart = null;
+
+    function initMarketChart() {
+      const ctx = document.getElementById('marketChart').getContext('2d');
+      marketChart = new Chart(ctx, {
+        type: 'line',
+        data: {
+          labels: ['1일전', '5일전', '10일전', '15일전', '20일전', '25일전', '30일전'].reverse(),
+          datasets: [{
+            label: '가격 (BP)',
+            data: [115000000, 114000000, 118000000, 120000000, 122000000, 121000000, 125000000],
+            borderColor: '#10b981',
+            backgroundColor: 'rgba(16, 185, 129, 0.1)',
+            fill: true,
+            tension: 0.3,
+            pointRadius: 4,
+            pointBackgroundColor: '#10b981'
+          }]
+        },
+        options: {
+          responsive: true,
+          maintainAspectRatio: false,
+          plugins: {
+            legend: { display: false }
+          },
+          scales: {
+            x: { grid: { color: '#1e293b' }, ticks: { color: '#94a3b8' } },
+            y: { grid: { color: '#1e293b' }, ticks: { color: '#94a3b8' } }
+          }
+        }
+      });
+    }
+
+    function analyzeMarketPrice() {
+      const pName = document.getElementById('market-player-input').value.trim() || "손흥민";
+      document.getElementById('m-player-name').innerText = pName;
+      document.getElementById('m-price-diff').innerText = "▲ +8.4% (상승세)";
+      document.getElementById('m-current-price').innerText = "125,000,000 BP";
+      document.getElementById('m-avg-price').innerText = "115,300,000 BP";
+      
+      if (marketChart) {
+        marketChart.data.datasets[0].data = Array.from({length: 7}, () => Math.floor(Math.random() * 20000000) + 110000000);
+        marketChart.update();
+      }
+    }
+
+    // ------------------------------------------------------------------------
+    // TAB 4: TEAM COLOR RANDOMIZER (SUB SERVICE)
+    // ------------------------------------------------------------------------
+    const TEAM_COLORS = [
+      // 🏴󠁧󠁢󠁥󠁮󠁧󠁿 EPL
+      { name: "맨체스터 시티", category: "클럽 팀 (EPL)", logo: "https://images.fotmob.com/image_resources/logo/teamlogos/8456.png", league: "잉글랜드 프리미어리그", players: "E. 홀란, K. 더브라위너, R. 디아스", buff: "전체 능력치 +4, 짧은 패스 +3, 시야 +3" },
+      { name: "맨체스터 유나이티드", category: "클럽 팀 (EPL)", logo: "https://images.fotmob.com/image_resources/logo/teamlogos/10260.png", league: "잉글랜드 프리미어리그", players: "B. 페르난데스, M. 래시퍼드, K. 메이누", buff: "전체 능력치 +4, 가속력 +3, 중거리 슛 +3" },
+      { name: "첼시", category: "클럽 팀 (EPL)", logo: "https://images.fotmob.com/image_resources/logo/teamlogos/8455.png", league: "잉글랜드 프리미어리그", players: "C. 팔머, E. 페르난데스, M. 카이세도", buff: "전체 능력치 +4, 몸싸움 +3, 볼 컨트롤 +3" },
+      { name: "리버풀", category: "클럽 팀 (EPL)", logo: "https://images.fotmob.com/image_resources/logo/teamlogos/8650.png", league: "잉글랜드 프리미어리그", players: "M. 살라, V. 반다이크, A. 맥 알리스터", buff: "전체 능력치 +4, 속력 +3, 반응 속도 +3" },
+      { name: "아스널", category: "클럽 팀 (EPL)", logo: "https://images.fotmob.com/image_resources/logo/teamlogos/9825.png", league: "잉글랜드 프리미어리그", players: "B. 사카, M. 외데고르, D. 라이스", buff: "전체 능력치 +4, 민첩성 +3, 짧은 패스 +3" },
+      { name: "토트넘 홋스퍼", category: "클럽 팀 (EPL)", logo: "https://images.fotmob.com/image_resources/logo/teamlogos/8586.png", league: "잉글랜드 프리미어리그", players: "손흥민, J. 매디슨, C. 로메로", buff: "전체 능력치 +4, 골 결정력 +3, 속력 +3" },
+
+      // 🇪🇸 라리가
+      { name: "레알 마드리드", category: "클럽 팀 (라리가)", logo: "https://images.fotmob.com/image_resources/logo/teamlogos/8633.png", league: "스페인 라리가", players: "K. 음바페, J. 벨링엄, V. 주니오르", buff: "전체 능력치 +4, 속력 +3, 슛 파워 +3" },
+      { name: "바르셀로나", category: "클럽 팀 (라리가)", logo: "https://images.fotmob.com/image_resources/logo/teamlogos/8634.png", league: "스페인 라리가", players: "R. 레반도프스키, L. 야말, 페드리", buff: "전체 능력치 +4, 짧은 패스 +3, 드리블 +3" },
+
+      // 🇩🇪 분데스리가
+      { name: "바이에른 뮌헨", category: "클럽 팀 (분데스리가)", logo: "https://images.fotmob.com/image_resources/logo/teamlogos/9823.png", league: "독일 분데스리가", players: "H. 케인, J. 무시알라, 김민재", buff: "전체 능력치 +4, 슛 파워 +3, 적극성 +3" },
+      { name: "도르트문트", category: "클럽 팀 (분데스리가)", logo: "https://images.fotmob.com/image_resources/logo/teamlogos/9789.png", league: "독일 분데스리가", players: "J. 브란트, N. 슐로터벡, D. 말런", buff: "전체 능력치 +4, 속력 +3, 가속력 +3" },
+
+      // 🇫🇷 리그 1
+      { name: "파리 생제르맹", category: "클럽 팀 (리그 1)", logo: "https://images.fotmob.com/image_resources/logo/teamlogos/9847.png", league: "프랑스 리그 1", players: "이강인, O. 뎀벨레, A. 하키미", buff: "전체 능력치 +4, 민첩성 +3, 드리블 +3" },
+
+      // 🇰🇷 K리그
+      { name: "울산 HD FC", category: "클럽 팀 (K리그)", logo: "https://images.fotmob.com/image_resources/logo/teamlogos/8575.png", league: "대한민국 K리그1", players: "주민규, 조현우, 설영우", buff: "전체 능력치 +4, 적극성 +3, 가속력 +3" },
+      { name: "FC 서울", category: "클럽 팀 (K리그)", logo: "https://images.fotmob.com/image_resources/logo/teamlogos/8576.png", league: "대한민국 K리그1", players: "제시 린가드, 기성용, 조영욱", buff: "전체 능력치 +4, 시야 +3, 슛 파워 +3" },
+
+      // 🌐 국가대표
+      { name: "대한민국", category: "국가대표", logo: "https://images.fotmob.com/image_resources/logo/teamlogos/8568.png", league: "국가대표 A대표팀", players: "손흥민, 김민재, 이강인, 황희찬", buff: "전체 능력치 +4, 속력 +3, 가속력 +3" },
+      { name: "프랑스", category: "국가대표", logo: "https://images.fotmob.com/image_resources/logo/teamlogos/4476.png", league: "국가대표 A대표팀", players: "K. 음바페, A. 그리즈만, A. 추아메니", buff: "전체 능력치 +4, 속력 +3, 몸싸움 +3" },
+      { name: "브라질", category: "국가대표", logo: "https://images.fotmob.com/image_resources/logo/teamlogos/8327.png", league: "국가대표 A대표팀", players: "네이마르, V. 주니오르, R. 카세미루", buff: "전체 능력치 +4, 개인기 +3, 민첩성 +3" }
+    ];
+
+    let isSpinning = false;
+
+    function drawTeamColor() {
+      if (isSpinning) return;
+
+      const allowClub = document.getElementById('chk-club').checked;
+      const allowNation = document.getElementById('chk-nation').checked;
+
+      if (!allowClub && !allowNation) {
+        alert("최소 하나의 카테고리를 선택해주세요!");
+        return;
+      }
+
+      const pool = TEAM_COLORS.filter(t => {
+        if (t.category.includes("클럽 팀") && allowClub) return true;
+        if (t.category === "국가대표" && allowNation) return true;
+        return false;
+      });
+
+      isSpinning = true;
+
+      const nameEl = document.getElementById('rand-result-name');
+      const categoryEl = document.getElementById('rand-result-category');
+      const logoBox = document.getElementById('rand-logo-box');
+      const logoEl = document.getElementById('rand-result-logo');
+      const detailsBox = document.getElementById('rand-team-details');
+      const btn = document.getElementById('draw-btn');
+
+      btn.disabled = true;
+      btn.classList.add('opacity-50', 'cursor-not-allowed');
+      detailsBox.classList.add('hidden');
+
+      let counter = 0;
+      const duration = 1200;
+      const intervalTime = 60;
+
+      const timer = setInterval(() => {
+        const randomTemp = pool[Math.floor(Math.random() * pool.length)];
+        nameEl.innerText = randomTemp.name;
+        categoryEl.innerText = randomTemp.category;
+        categoryEl.classList.remove('opacity-0');
+        
+        logoBox.classList.remove('hidden');
+        logoEl.src = randomTemp.logo;
+
+        counter += intervalTime;
+        if (counter >= duration) {
+          clearInterval(timer);
+          
+          const finalResult = pool[Math.floor(Math.random() * pool.length)];
+          nameEl.innerText = finalResult.name;
+          categoryEl.innerText = finalResult.category;
+          logoEl.src = finalResult.logo;
+
+          document.getElementById('rand-league-info').innerText = finalResult.league;
+          document.getElementById('rand-top-players').innerText = finalResult.players;
+          document.getElementById('rand-buff-stats').innerText = finalResult.buff;
+          detailsBox.classList.remove('hidden');
+
+          confetti({
+            particleCount: 50,
+            spread: 60,
+            origin: { y: 0.7 }
+          });
+
+          isSpinning = false;
+          btn.disabled = false;
+          btn.classList.remove('opacity-50', 'cursor-not-allowed');
+        }
+      }, intervalTime);
+    }
+  </script>
+</body>
+</html>
