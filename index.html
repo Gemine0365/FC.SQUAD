@@ -1499,7 +1499,7 @@ function escapeHtml(value) {
 
 async function fetchHotPlayers() {
     try {
-        const response = await fetch('/api/hot-players');
+       const response = await fetch('/api/hot-players');
         if (!response.ok) throw new Error(`HTTP ${response.status}`);
         
         const data = await response.json();
