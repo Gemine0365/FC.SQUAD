@@ -418,10 +418,20 @@
     </div>
   </div>
 
-  <!-- Footer -->
-  <footer class="w-full py-6 text-center text-xs text-slate-600 border-t border-slate-800/80 bg-[#0c1017]">
-    (C) FCSQUAD. All rights reserved. Data provided by NEXON Open API.
-  </footer>
+  <!-- Footer (API 상태 표시 인디케이터 포함) -->
+<footer class="w-full py-6 px-4 border-t border-slate-800/80 bg-[#0c1017]">
+  <div class="max-w-7xl mx-auto flex flex-col sm:flex-row items-center justify-between gap-2 text-xs text-slate-600">
+    <div>
+      (C) FCSQUAD. All rights reserved. Data provided by NEXON Open API.
+    </div>
+    <!-- 우측 하단 API 실시간 상태 индика터 -->
+    <div class="flex items-center gap-2 bg-slate-900 px-3.5 py-1.5 rounded-full border border-slate-800 shadow-md">
+      <span class="text-slate-400 font-medium">불러오기</span>
+      <span id="api-status-icon" class="text-sm">🟡</span>
+      <span id="api-status-text" class="text-[11px] text-slate-500 font-mono">연동 확인 중...</span>
+    </div>
+  </div>
+</footer>
 
   <script>
     // NEXON OPEN API KEY CONFIGURATION
