@@ -56,9 +56,9 @@
           <button id="nav-match" onclick="switchTab('match')" class="px-4 py-2 rounded-lg text-sm font-semibold transition-all text-emerald-400 bg-slate-800/80">
             전적 분석
           </button>
-          <button id="nav-squad" onclick="switchTab('squad')" class="px-4 py-2 rounded-lg text-sm font-semibold transition-all text-slate-400 hover:text-white hover:bg-slate-800/40">
-            스쿼드 분석
-          </button>
+          <button id="nav-squad" onclick="switchTab('squad'); initPitch();" class="px-4 py-2 rounded-lg text-sm font-semibold transition-all text-slate-400 hover:text-white hover:bg-slate-800/40">
+  스쿼드 분석
+</button>
           <button id="nav-market" onclick="switchTab('market')" class="px-4 py-2 rounded-lg text-sm font-semibold transition-all text-slate-400 hover:text-white hover:bg-slate-800/40">
             이적시장 시세 분석
           </button>
@@ -481,8 +481,17 @@
         }
       });
 
-      document.getElementById(`tab-${tabId}`).classList.remove('hidden');
-    }
+    
+    document.getElementById(`tab-${tabId}`).classList.remove('hidden');
+
+// 👇 여기에 추가되었습니다!
+if (tabId === 'squad') {
+  setTimeout(initPitch, 50);
+}
+}
+
+// TAB 1: MATCH SEARCH LOGIC
+    
 
     // TAB 1: MATCH SEARCH LOGIC
     function setSearchName(name) {
