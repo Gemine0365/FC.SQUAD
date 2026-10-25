@@ -4,6 +4,8 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>FC SQUAD - FC 온라인 전적 검색 & 스쿼드 도우미</title>
+
+    <script type="text/javascript" src="https://openapi.nexon.com/js/analytics.js?app_id=355977" async></script>
     
     <!-- 파비콘 (초록색 육각형에 F) -->
     <link rel="icon" type="image/svg+xml" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><polygon points='50,5 95,27.5 95,72.5 50,95 5,72.5 5,27.5' fill='%2310B981'/><text x='50%' y='65%' font-size='55' font-weight='900' fill='white' font-family='sans-serif' text-anchor='middle'>F</text></svg>">
@@ -1402,34 +1404,46 @@
         /* ==========================================================================
            🔍 전적 검색 및 팀컬러 추첨기 & TOP 랭커 / 이적시장 핫 선수 NEXON API 연동
            ========================================================================== */
-
+        const NEXON_API_KEY = "test_21197d6df11990fbaa6c34c0b101302d710ff2400bcfd3d8c66968de798a9345efe8d04e6d233bd35cf2fabdeb93fb0d";
         // 1. TOP 랭커 데이터 연동
-        let topRankersData = [
-            { rank: 1, name: "FC크리스티아누", tier: "슈퍼챔피언스", winRate: "78.4%", mainTeam: "레알 마드리드", level: 412 },
-            { rank: 2, name: "첼시의신", tier: "슈퍼챔피언스", winRate: "75.1%", mainTeam: "첼시 FC", level: 388 },
-            { rank: 3, name: "손흥민존", tier: "슈퍼챔피언스", winRate: "73.9%", mainTeam: "대한민국", level: 350 },
-            { rank: 4, name: "뮌헨제국", tier: "챔피언스", winRate: "71.2%", mainTeam: "바이에른 뮌헨", level: 295 },
-            { rank: 5, name: "중원지배자", tier: "챔피언스", winRate: "69.8%", mainTeam: "AC 밀란", level: 310 }
-        ];
+        // 스크립트 최상단에 선언해둔 NEXON_API_KEY를 공통으로 사용합니다.
+// const NEXON_API_KEY = "live_발급받으신_실제_API_KEY";
 
-        async function fetchTopRankers() {
-            const container = document.getElementById('top-rankers-grid');
-            container.innerHTML = `
-                <div class="col-span-full text-center py-6 text-gray-500 text-xs">
-                    <i class="fa-solid fa-spinner animate-spin text-brand text-lg mb-2"></i><br>
-                    실시간 인기 유저 API 연동 중...
-                </div>
-            `;
+// 1. TOP 랭커 데이터 연동 함수
+async function fetchTopRankers() {
+    const container = document.getElementById('top-rankers-grid');
+    container.innerHTML = `
+        <div class="col-span-full text-center py-6 text-gray-500 text-xs">
+            <i class="fa-solid fa-spinner animate-spin text-brand text-lg mb-2"></i><br>
+            실시간 인기 유저 API 연동 중...
+        </div>
+    `;
 
-            try {
-                // NEXON Open API 랭커 연동
-                setTimeout(() => {
-                    renderTopRankers(topRankersData);
-                }, 300);
-            } catch (err) {
-                renderTopRankers(topRankersData);
+    try {
+        // 🔥 실제 NEXON Open API 랭커 목록 호출
+        const response = await fetch('https://open.api.nexon.com/fconline/v1/ranker', {
+            method: 'GET',
+            headers: {
+                'x-nxopen-api-key': NEXON_API_KEY, // 동일한 API Key 사용
+                'Content-Type': 'application/json'
             }
+        });
+
+        if (!response.ok) {
+            throw new Error(`API 호출 실패: ${response.status}`);
         }
+
+        const data = await response.json();
+
+        // 받아온 실제 랭커 데이터 렌더링
+        renderTopRankers(data);
+
+    } catch (err) {
+        console.warn('랭커 API 호출 중 오류 발생: 더미 데이터를 표시합니다.', err);
+        // API 호출 에러 시 기존 임시 데이터 표출 (Fallback)
+        renderTopRankers(topRankersData);
+    }
+}
 
         function renderTopRankers(rankers) {
             const container = document.getElementById('top-rankers-grid');
@@ -1470,25 +1484,43 @@
             { spid: 101000009, name: "V. 반데이크", season: "24TS", price: "8,200억 BP", trend: "+2.0%" }
         ];
 
-        async function fetchHotPlayers() {
-            const container = document.getElementById('hot-players-grid');
-            container.innerHTML = `
-                <div class="col-span-full text-center py-6 text-gray-500 text-xs">
-                    <i class="fa-solid fa-spinner animate-spin text-red-500 text-lg mb-2"></i><br>
-                    NEXON 이적시장 시세 API 연동 중...
-                </div>
-            `;
 
-            try {
-                // NEXON Open API 이적시장 연동 Endpoint (https://open.api.nexon.com/fconline/v1/market)
-                setTimeout(() => {
-                    renderHotPlayers(hotPlayersData);
-                }, 400);
-            } catch (err) {
-                renderHotPlayers(hotPlayersData);
+// 2. 이적시장 핫 선수 NEXON API 연동 함수
+async function fetchHotPlayers() {
+    const container = document.getElementById('hot-players-grid');
+    container.innerHTML = `
+        <div class="col-span-full text-center py-6 text-gray-500 text-xs">
+            <i class="fa-solid fa-spinner animate-spin text-red-500 text-lg mb-2"></i><br>
+            NEXON 이적시장 시세 API 연동 중...
+        </div>
+    `;
+
+    try {
+        // 🔥 실제 NEXON Open API 호출 구문
+        const response = await fetch('https://open.api.nexon.com/fconline/v1/market/top-players', {
+            method: 'GET',
+            headers: {
+                'x-nxopen-api-key': NEXON_API_KEY, // <--- 여기에 API Key가 헤더로 들어갑니다!
+                'Content-Type': 'application/json'
             }
+        });
+
+        if (!response.ok) {
+            throw new Error(`API 호출 실패: ${response.status}`);
         }
 
+        const data = await response.json();
+
+        // 넥슨 API로 받아온 실제 데이터 렌더링
+        // (API 응답 데이터 형식을 변환하여 renderHotPlayers에 전달)
+        renderHotPlayers(data);
+
+    } catch (err) {
+        console.warn('NEXON API 호출 중 오류 발생 (키 미설정 또는 CORS 제한): 더미 데이터를 표시합니다.', err);
+        // API 키가 없거나 호출 오류 시 기존의 임시 더미 데이터로 표시
+        renderHotPlayers(hotPlayersData);
+    }
+}
         function renderHotPlayers(players) {
             const container = document.getElementById('hot-players-grid');
 
