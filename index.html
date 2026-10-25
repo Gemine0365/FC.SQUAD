@@ -1,0 +1,105 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>FC SQUAD - FC 온라인 통합 포털</title>
+  
+  <!-- Tailwind CSS CDN -->
+  <script src="https://cdn.tailwindcss.com"></script>
+  <!-- Chart.js CDN -->
+  <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+  <!-- Canvas Confetti -->
+  <script src="https://cdn.jsdelivr.net/npm/canvas-confetti@1.6.0/dist/confetti.browser.min.js"></script>
+
+  <style>
+    /* OP.GG 커스텀 스크롤바 & 다크 톤 스타일 */
+    ::-webkit-scrollbar {
+      width: 6px;
+      height: 6px;
+    }
+    ::-webkit-scrollbar-track {
+      background: #0f172a;
+    }
+    ::-webkit-scrollbar-thumb {
+      background: #334155;
+      border-radius: 3px;
+    }
+    ::-webkit-scrollbar-thumb:hover {
+      background: #475569;
+    }
+  </style>
+</head>
+<body class="bg-[#0b0e14] text-slate-100 font-sans min-h-screen flex flex-col justify-between selection:bg-emerald-500 selection:text-slate-950">
+
+  <!-- 1. Global Navigation Bar -->
+  <header class="w-full bg-[#121824] border-b border-slate-800/80 sticky top-0 z-50 backdrop-blur-md bg-opacity-90">
+    <div class="max-w-7xl mx-auto px-4 sm:px-6 flex items-center justify-between h-16">
+      
+      <!-- Brand Logo & Title -->
+      <div class="flex items-center gap-8">
+        <a href="#" onclick="switchTab('match')" class="flex items-center gap-2.5 group">
+          <div class="w-9 h-9 rounded-xl bg-gradient-to-br from-emerald-400 to-teal-600 flex items-center justify-center font-black text-slate-950 text-xl shadow-lg shadow-emerald-500/20 group-hover:scale-105 transition-transform">
+            FC
+          </div>
+          <div class="flex flex-col">
+            <span class="font-extrabold text-lg text-white tracking-wider flex items-center gap-1">
+              FCSQUAD
+            </span>
+            <span class="text-[10px] text-emerald-400 font-medium tracking-tight">fcsquad.kro.kr</span>
+          </div>
+        </a>
+
+        <!-- Main Navigation Tabs -->
+        <nav class="hidden md:flex items-center gap-1">
+          <button id="nav-match" onclick="switchTab('match')" class="px-4 py-2 rounded-lg text-sm font-semibold transition-all text-emerald-400 bg-slate-800/80">
+            📊 전적 분석
+          </button>
+          <button id="nav-squad" onclick="switchTab('squad')" class="px-4 py-2 rounded-lg text-sm font-semibold transition-all text-slate-400 hover:text-white hover:bg-slate-800/40">
+            🧩 스쿼드 분석
+          </button>
+          <button id="nav-market" onclick="switchTab('market')" class="px-4 py-2 rounded-lg text-sm font-semibold transition-all text-slate-400 hover:text-white hover:bg-slate-800/40">
+            📈 이적시장 시세
+          </button>
+          <button id="nav-random" onclick="switchTab('random')" class="px-4 py-2 rounded-lg text-sm font-semibold transition-all text-slate-400 hover:text-white hover:bg-slate-800/40 flex items-center gap-1.5">
+            🎲 팀컬러 랜덤 추첨기
+            <span class="text-[10px] bg-slate-700 text-slate-300 px-1.5 py-0.5 rounded font-normal">SUB</span>
+          </button>
+        </nav>
+      </div>
+
+    </div>
+  </header>
+
+  <!-- Mobile Tab Navigation -->
+  <div class="md:hidden flex overflow-x-auto bg-[#121824] border-b border-slate-800 px-2 py-2 gap-1 no-scrollbar">
+    <button id="m-nav-match" onclick="switchTab('match')" class="px-3 py-1.5 rounded-md text-xs font-semibold whitespace-nowrap text-emerald-400 bg-slate-800">전적 분석</button>
+    <button id="m-nav-squad" onclick="switchTab('squad')" class="px-3 py-1.5 rounded-md text-xs font-semibold whitespace-nowrap text-slate-400">스쿼드 분석</button>
+    <button id="m-nav-market" onclick="switchTab('market')" class="px-3 py-1.5 rounded-md text-xs font-semibold whitespace-nowrap text-slate-400">이적시장 시세</button>
+    <button id="m-nav-random" onclick="switchTab('random')" class="px-3 py-1.5 rounded-md text-xs font-semibold whitespace-nowrap text-slate-400">랜덤 추첨기</button>
+  </div>
+
+  <!-- Content Container -->
+  <main class="w-full max-w-7xl mx-auto px-4 sm:px-6 py-8 flex-1">
+
+    <!-- TAB 1: 전적 분석 (Hero Search Main) -->
+    <section id="tab-match" class="space-y-8">
+      
+      <!-- OP.GG style Hero Banner -->
+      <div class="relative py-12 flex flex-col items-center justify-center text-center">
+        <!-- Logo Display -->
+        <div class="mb-4 inline-flex items-center justify-center w-20 h-20 rounded-3xl bg-slate-900 border border-emerald-500/30 shadow-2xl shadow-emerald-500/10">
+          <span class="text-4xl">⚽</span>
+        </div>
+        <h1 class="text-3xl sm:text-4xl font-black text-white tracking-tight mb-2">
+          구단주 전적 및 통계 조회
+        </h1>
+        <p class="text-slate-400 text-sm max-w-md mb-8">
+          FC 온라인 구단주의 매치 기록, 승률, 대표 스쿼드를 분석하세요.
+        </p>
+
+        <!-- Search Form -->
+        <div class="w-full max-w-2xl relative">
+          <form onsubmit="handleSearch(event)" class="relative flex items-center">
+            <input 
+              type
