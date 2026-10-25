@@ -1,0 +1,6 @@
+{
+  "rewrites": [
+    { "source": "/api/ranker", "destination": "/api/ranker.js" },
+    { "source": "/api/hot-players", "destination": "/api/hot-players.js" }
+  ]
+}
